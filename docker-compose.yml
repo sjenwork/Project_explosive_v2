@@ -1,0 +1,26 @@
+version: "3.0"
+
+networks:
+  explosive_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.18.0/24
+          # - subnet: 10.5.0.0/16
+          gateway: 172.18.18.1
+
+services:
+  explosive_web:
+    container_name: explosive_web
+    networks:
+      explosive_network:
+        ipv4_address: 172.18.18.3
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    stdin_open: true
+    tty: true
+    expose:
+      - 8000
+    ports:
+      - 8000:80
