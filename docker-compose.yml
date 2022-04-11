@@ -10,6 +10,39 @@ networks:
           gateway: 172.18.18.1
 
 services:
+  explosive_backend:
+    container_name: explosive_backend
+    networks:
+      explosive_network:
+        ipv4_address: 172.18.18.2
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    volumes:
+      - ./explosive_backend:/usr/src/main
+    ports:
+      - 8001:8000
+    expose:
+      - 8001
+    stdin_open: true
+    command: "/root/miniconda3/envs/py310/bin/uvicorn runApiServer:app --port 8000 --host 0.0.0.0"
+    # command: "bash"
+
+  mongodb:
+    depends_on:
+      - core
+    image: mongo:latest
+    container_name: explosive_mongo
+    networks:
+      explosive_network:
+        ipv4_address: 172.18.18.4
+    expose:
+      - 27017
+    ports:
+      - 27017:27017
+    volumes:
+      - ./data:/data/db
+
   explosive_web:
     container_name: explosive_web
     networks:
