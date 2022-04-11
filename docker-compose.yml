@@ -21,16 +21,16 @@ services:
     volumes:
       - ./explosive_backend:/usr/src/main
     ports:
-      - 8001:8000
+      - 8001:8001
     expose:
       - 8001
     stdin_open: true
-    command: "/root/miniconda3/envs/py310/bin/uvicorn runApiServer:app --port 8000 --host 0.0.0.0"
+    command: "/root/miniconda3/envs/py310/bin/uvicorn runApiServer:app --port 8001 --host 0.0.0.0"
     # command: "bash"
 
   mongodb:
     depends_on:
-      - core
+      - explosive_backend
     image: mongo:latest
     container_name: explosive_mongo
     networks:
@@ -44,6 +44,8 @@ services:
       - ./data:/data/db
 
   explosive_web:
+    depends_on:
+      - explosive_backend
     container_name: explosive_web
     networks:
       explosive_network:
