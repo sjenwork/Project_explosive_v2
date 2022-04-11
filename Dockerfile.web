@@ -4,12 +4,18 @@ COPY ./explosive_web/package*.json ./
 COPY ./explosive_web/ .
 RUN npm install && npm run build
 
-FROM node as production-stage
-RUN mkdir /usr/src/app
-WORKDIR /usr/src/app
-# COPY package-node.json ./package.json
-RUN npm install -g serve
-# COPY app.js .
-COPY --from=build-stage /app/dist /usr/src/app/dist/explosivemap
-CMD [ "serve", "dist" ]
+FROM nginx as production-stage
+RUN mkdir /app
+COPY --from=build-stage /app/dist /app/explosivemap
+COPY nginx.conf /etc/nginx/nginx.conf
+
+
+# FROM node as production-stage
+# RUN mkdir /usr/src/app
+# WORKDIR /usr/src/app
+# # COPY package-node.json ./package.json
+# RUN npm install -g serve
+# # COPY app.js .
+# COPY --from=build-stage /app/dist /usr/src/app/dist/explosivemap
+# CMD [ "serve", "dist" ]
 

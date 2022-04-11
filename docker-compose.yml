@@ -56,23 +56,6 @@ services:
     stdin_open: true
     tty: true
     expose:
-      - 3000
-    ports:
-      - 3000:3000
-
-  explosive_nginx:
-    depends_on:
-      - explosive_backend
-    container_name: explosive_nginx
-    networks:
-      explosive_network:
-        ipv4_address: 172.18.18.5
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
-    stdin_open: true
-    tty: true
-    expose:
       - 8000
     ports:
       - 8000:80
