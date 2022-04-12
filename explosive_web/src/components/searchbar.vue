@@ -8,29 +8,15 @@
         <!-- 運作行為 -->
         <div class="col-3 border-end ps-2">
           <!-- <div class="col-sm-3 col-10 border-end ps-2"> -->
-          <multiselect
-            v-model="selectedOperation"
-            placeholder="行為"
-            :options="operationOptions.map((i) => i.chn)"
-            :searchable="false"
-            :close-on-select="true"
-            :show-labels="false"
-          ></multiselect>
+          <multiselect v-model="selectedOperation" placeholder="行為" :options="operationOptions.map((i) => i.chn)"
+            :searchable="false" :close-on-select="true" :show-labels="false"></multiselect>
         </div>
         <!-- 化學物質 -->
         <div class="col-7 ps-2">
           <!-- <div class="offset-sm-0 col-sm-7 offset-2 col-10 ps-2"> -->
-          <multiselect
-            v-model="selectedChem"
-            placeholder="化學物質"
-            open-direction="bottom"
-            :options="chemicallist"
-            :searchable="true"
-            :loading="isLoading"
-            :close-on-select="true"
-            :show-labels="false"
-            @search-change="asyncFind"
-          >
+          <multiselect v-model="selectedChem" placeholder="化學物質" open-direction="bottom" :options="chemicallist"
+            :searchable="true" :loading="isLoading" :close-on-select="true" :show-labels="false"
+            @search-change="asyncFind">
             <template slot="tag" slot-scope="{ option, remove }">
               <span class="custom__tag">
                 <span>{{ option.name }}</span>
@@ -38,11 +24,8 @@
               </span>
             </template>
             <template slot="clear" slot-scope="props">
-              <div
-                class="multiselect__clear"
-                v-if="selectedChem.length"
-                @mousedown.prevent.stop="clearAll(props.search)"
-              ></div>
+              <div class="multiselect__clear" v-if="selectedChem.length"
+                @mousedown.prevent.stop="clearAll(props.search)"></div>
             </template>
             <span slot="noResult">
               Oops! No elements found. Consider changing the search
@@ -84,15 +67,12 @@ var chemicallist = ref([]);
 var isLoading = ref(false);
 const asyncFind = async (query) => {
   isLoading.value = true;
-  // console.log(import.meta.env.VITE_API_BASE_URL);
   let baseurl = import.meta.env.VITE_API_BASE_URL;
-  console.log(1);
   console.log(`${baseurl}/chemilist`);
   let res = await fetch(
     // "https://jenicksun.xn--kpry57d/explosive/statistic/chemlist/"
     `${baseurl}/chemilist`
   ).then((res) => res.json());
-  console.log(2);
   chemicallist.value = res.map((i) => i["label"]);
   isLoading.value = false;
 };
@@ -225,6 +205,7 @@ onMounted(() => { });
     margin: 10px;
   }
 }
+
 @media screen and (max-width: 340px) {
   #searchbar {
     z-index: 1000;
@@ -236,7 +217,7 @@ onMounted(() => { });
   }
 }
 
-.row > * {
+.row>* {
   padding-left: 0px;
   padding-right: 0px;
 }
@@ -246,6 +227,7 @@ onMounted(() => { });
   border-radius: 0px;
   border-width: 0px;
 }
+
 .togglebtn {
   /* position: fixed; */
   cursor: pointer;
@@ -255,32 +237,44 @@ onMounted(() => { });
   /* vertical-align: middle; */
   line-height: 41px;
 }
+
 .noselect {
-  -webkit-touch-callout: none; /* iOS Safari */
-  -webkit-user-select: none; /* Safari */
-  -khtml-user-select: none; /* Konqueror HTML */
-  -moz-user-select: none; /* Old versions of Firefox */
-  -ms-user-select: none; /* Internet Explorer/Edge */
-  user-select: none; /* Non-prefixed version, currently
+  -webkit-touch-callout: none;
+  /* iOS Safari */
+  -webkit-user-select: none;
+  /* Safari */
+  -khtml-user-select: none;
+  /* Konqueror HTML */
+  -moz-user-select: none;
+  /* Old versions of Firefox */
+  -ms-user-select: none;
+  /* Internet Explorer/Edge */
+  user-select: none;
+  /* Non-prefixed version, currently
                                   supported by Chrome, Edge, Opera and Firefox */
 }
+
 ::v-deep(.multiselect__single) {
   margin: 0px;
   width: auto;
   /* width: calc(100%-20px); */
 }
+
 ::v-deep(.multiselect__tags) {
   padding: 0px;
   line-height: 41px;
   height: 41px;
 }
+
 ::v-deep(.multiselect__single) {
   line-height: 41px;
 }
+
 ::v-deep(.multiselect__placeholder) {
   padding: 0px;
   margin: 0px;
 }
+
 ::v-deep(.multiselect__input) {
   margin: 0px;
   line-height: 41px;
