@@ -8,7 +8,6 @@ import pyodbc as sqldriver
 
 config = ConfigParser()
 config.read('src/conf.ini')
-print(list(config.items()))
 
 
 def get_conn(machineName, name=None):
@@ -22,11 +21,13 @@ def get_conn(machineName, name=None):
     username = config[machineName]['sql_username']
     password = quote(config[machineName]['sql_password'])
     sqlalchemy_driver = config[machineName]['sql_sqlalchemy_driver']
-    # info = f'''DRIVER={driver};SERVER={server};UID={username};PWD={password}'''
 
-    conn = 'mssql+pymssql://username:password@server:port/table'
-    if hostname == 'JenMBP.local':
-        conn = 'mssql+pyodbc://username:password@server:port/table?driver=sqlalchemy_driver'
+    conn = (
+        'mssql+pymssql://username:password@server:port/table'
+        if hostname != 'JenMBP.local'
+        else 'mssql+pyodbc://username:password@server:port/table?driver=sqlalchemy_driver'
+    )
+
     conn = (conn
             .replace('username', username)
             .replace('server', server)

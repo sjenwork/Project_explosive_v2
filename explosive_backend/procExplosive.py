@@ -12,7 +12,8 @@ from src.tools import getFuncName
 import json
 import numpy as np
 import os
-import pymongo
+from tqdm import tqdm
+import datetime
 
 
 pd.set_option('display.unicode.east_asian_width', True)
@@ -189,11 +190,12 @@ def groupBy(data, cols=[('ComFacBizName', ''), ('ComFacBizAddress', ''), ('impor
     s = data[col_by].assign(group='', status=0).sort_values(by='ComFacBizName')
     sn = copy.deepcopy(s)
     groupind = 0
-    for j, [i, row] in enumerate(s.iterrows()):
+    for i, row in tqdm(s.iterrows(), desc='grouping factory', total=len(s)):
+        # for j, [i, row] in enumerate(s.iterrows()):
         if sn.loc[i, 'group'] != '':
             continue
-        if np.mod(groupind, 500) == 0:
-            print(groupind)
+        # if np.mod(groupind, 500) == 0:
+            # print(groupind)
 
         s1 = s.iloc[:, :2]
         s2 = pd.concat(
@@ -207,8 +209,9 @@ def groupBy(data, cols=[('ComFacBizName', ''), ('ComFacBizAddress', ''), ('impor
 
     grp2name = sn[['group', 'ComFacBizName']].groupby(['group']).agg(
         lambda i: i.iloc[0])
-    sn['ComFacBizName_m'] = sn['group'].map(grp2name.ComFacBizName)
-    data2 = pd.concat([data, sn['ComFacBizName_m']], axis=1)
+    sn['ComFacBizName'] = sn['group'].map(grp2name.ComFacBizName)
+    data2 = pd.concat([data.drop(columns='ComFacBizName'),
+                      sn['ComFacBizName']], axis=1)
     return data2
 
 
@@ -216,7 +219,7 @@ def wide2long(data):
     data2 = {}
     for operation in ['import', 'produce', 'usage', 'storage']:
         cols1 = ['time', 'deptid', 'casno', 'PlaceType',
-                 'RegionType', 'ComFacBizName', 'ComFacBizName_m']
+                 'RegionType', 'ComFacBizName']
         cols2 = [f'{operation}_info-{i}' for i in ['Quantity', 'X', 'Y']]
         cols = cols1 + cols2
         data2[operation] = data[cols]
@@ -240,7 +243,7 @@ def wide2long(data):
             item[item[f'{key}_info-X'] != '-']
             .assign(count=0)
             .groupby([
-                'ComFacBizName_m', 'casno', 'time', 'deptid', f'{key}_info-X',
+                'ComFacBizName', 'casno', 'time', 'deptid', f'{key}_info-X',
                 f'{key}_info-Y'])
             .agg(aggfun)
         )
@@ -248,7 +251,7 @@ def wide2long(data):
         item_2 = (
             item[item[f'{key}_info-X'] == '-']
             .set_index([
-                'ComFacBizName_m', 'casno', 'time', 'deptid', f'{key}_info-X',
+                'ComFacBizName', 'casno', 'time', 'deptid', f'{key}_info-X',
                 f'{key}_info-Y'])
         )
 
@@ -299,7 +302,7 @@ def statisticByCity(data):
 
 def statisticByFac(data):
     data2 = data.groupby([
-        "time", "operation", "name", "lon", "lat", "ComFacBizName_m", 'deptid']
+        "time", "operation", "name", "lon", "lat", "ComFacBizName", 'deptid']
     ).agg({'Quantity': 'sum'}).reset_index()
     return data2
 
@@ -307,8 +310,6 @@ def statisticByFac(data):
 def handleProcRecord(method, nlen=None):
     import datetime
     now = datetime.datetime.now()
-    # client = pymongo.MongoClient("mongodb://localhost:27017/")
-    # db = client["explosive"]
     db = connMongo(machineName)
     col = db['status']
     if method == 'save':
@@ -382,9 +383,7 @@ class proc_explosive():
         self.df2 = self.df.drop(self.df[self.df.casno == ''].index)
 
 
-def saveRecords(data, colname, method):
-    # client = pymongo.MongoClient("mongodb://localhost:27017/")
-    # db = client["explosive"]
+def saveRecords(data, colname, machineName, method):
     db = connMongo(machineName)
     col = db[colname]
     if method == 'overwrite':
@@ -393,20 +392,41 @@ def saveRecords(data, colname, method):
 
 
 if __name__ == '__main__':
-    method = 'overwrite'
-    machineName = 'mssql_chemtest'
-    p = proc_explosive(machineName, method=method)
-    # df3 = groupBy(p.df2)  # 以廠商名稱、地址、座標分組
-    # df4 = wide2long(df3)  # 資料統整
-    # df5 = locateCounty(df4)  # 座標轉換與定位
-    # df5 = pd.DataFrame(df5.drop(columns=['geometry']))
-    # df5.time = df5.time.astype(int)
-    # df6 = statisticByCity(df5)
-    # df7 = statisticByFac(df5)
-    # df5_save = df5.fillna('-').to_dict(orient='records')
-    # df6_save = df6.fillna('-').to_dict(orient='records')
-    # df7_save = df7.fillna('-').to_dict(orient='records')
+    test = True
+    save = False
+    load = True
+    now = datetime.datetime.now()
 
-    # saveRecords(df5_save, colname='records_all', method=method)
-    # saveRecords(df6_save, colname='records_city', method=method)
-    # saveRecords(df6_save, colname='records_fac', method=method)
+    save_paras = {
+        'method': 'overwrite',
+        'machineName': 'mongo_chemtest_outside_container'
+    }
+    method = 'overwrite'
+    if not test:
+        machineName = 'mssql_chemtest'
+        p = proc_explosive(machineName, method=method)
+        df3 = groupBy(p.df2)  # 以廠商名稱、地址、座標分組
+        df4 = wide2long(df3)  # 資料統整
+        df5 = locateCounty(df4)  # 座標轉換與定位
+        df5 = pd.DataFrame(df5.drop(columns=['geometry']))
+        df5.time = df5.time.astype(int)
+        df6 = statisticByCity(df5)
+        df7 = statisticByFac(df5)
+
+    if save:
+        paras = {'orient': 'records', 'indent': 2, 'force_ascii': False}
+        df5.fillna('-').to_json('tmp/df5.json', **paras)
+        df6.fillna('-').to_json('tmp/df6.json', **paras)
+        df7.fillna('-').to_json('tmp/df7.json', **paras)
+
+    if load:
+        df5 = pd.read_json('tmp/df5.json')
+        df6 = pd.read_json('tmp/df6.json')
+        df7 = pd.read_json('tmp/df7.json')
+
+    df5_save = df5.fillna('-').assign(updatetime=now).to_dict(orient='records')
+    df6_save = df6.fillna('-').assign(updatetime=now).to_dict(orient='records')
+    df7_save = df7.fillna('-').assign(updatetime=now).to_dict(orient='records')
+    saveRecords(df5_save, colname='records_all', **save_paras)
+    saveRecords(df6_save, colname='records_city', **save_paras)
+    saveRecords(df6_save, colname='records_fac', **save_paras)
