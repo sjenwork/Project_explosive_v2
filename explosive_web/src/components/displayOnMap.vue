@@ -29,7 +29,7 @@ watch(
     var df_all = new DataFrame(data)
       .cast("lon", (i) => String(i))
       .cast("lat", (i) => String(i))
-      .groupBy("time", "operation", "name", "lon", "lat", "ComFacBizName_m")
+      .groupBy("time", "operation", "name", "lon", "lat", "ComFacBizName")
       .aggregate((group) => group.stat.sum("Quantity"))
       .rename("aggregation", "Quantity");
 
@@ -103,11 +103,11 @@ watch(
       {
         lon: df_all2.map((i) => i.lon),
         lat: df_all2.map((i) => i.lat),
-        text: df_all2.map((i) => `${i.ComFacBizName_m}:<br> ${i.Quantity}`),
+        text: df_all2.map((i) => `${i.ComFacBizName}:<br> ${i.Quantity}`),
         type: "scattermapbox",
         // hoverinfo: "text",
         name: "",
-        // hovertext: df_all2.map((i) => i.ComFacBizName_m),
+        // hovertext: df_all2.map((i) => i.ComFacBizName),
         hovertemplate: "%{text} 公噸",
         marker: {
           color: "rgba(58,99,73,.95)",

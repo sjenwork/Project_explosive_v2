@@ -12,14 +12,15 @@ RUN (apt update &&  apt upgrade -y )\
 # && (apt install wget)
 # && (wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh)\
 COPY Miniconda3-latest-Linux-x86_64.sh /usr/src/main/
+# RUN pip install -U pip
 RUN bash Miniconda3-latest-Linux-x86_64.sh -b \
     && conda init \
     && . /root/.bashrc  \
     && conda create -n py310 python=3.10 \
     && conda activate py310 \
     && pip install -U pip \
-    && pip install sqlalchemy geopandas fastapi uvicorn gunicorn ipython tqdm\
-    && conda install -y pymssql==2.2.4 pymongo pyodbc\
+    && pip install sqlalchemy geopandas fastapi uvicorn gunicorn ipython tqdm pymssql==2.2.4\
+    && conda install -y pymongo pyodbc\
     && echo 'conda activate py310' >> /root/.bashrc
 
 

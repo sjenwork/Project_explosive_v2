@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.mongo_tools import get_conn as connMongo
 # import pymongo
 import socket
+import numpy as np
+from src.tools import createRandomChn
 
 pd.set_option('display.unicode.east_asian_width', True)
 pd.set_option('display.unicode.ambiguous_as_wide', True)
@@ -46,7 +48,7 @@ def test():
 async def explosive(
         kind: str,
         city: str = None,
-        ComFacBizName_m: str = None,
+        ComFacBizName: str = None,
         name: str = None,
         casno: str = None,
         label: str = None,
@@ -58,14 +60,15 @@ async def explosive(
     # async def explosive(kind: str):
     # client = pymongo.MongoClient("mongodb://localhost:27017/")
     # db = client["explosive"]
-    machineName = socket.gethostname()
+    # machineName = socket.gethostname()
+    machineName = 'mongo_chemtest_from_container'
     db = connMongo(machineName)
     if db:
         col = db[kind]
         query = {}
         # if kind == 'records_all':
-        if ComFacBizName_m is not None:
-            query = query | {'ComFacBizName_m': {'$regex': ComFacBizName_m}}
+        if ComFacBizName is not None:
+            query = query | {'ComFacBizName': {'$regex': ComFacBizName}}
         if casno is not None:
             query = query | {'casno': {'$regex': casno}}
         if name is not None:
@@ -84,9 +87,23 @@ async def explosive(
             query = query | {'time': {'$lte': time}}
         data = col.find(query, {'_id': False})
         res = list(data)
-        # elif kind == 'chemilist':
-        #     data = col.find({'label': {'$regex': name}})
-        #     return list(data)
+        randomizedata = True
+        if randomizedata & (kind == 'records_all'):
+            tmp = pd.DataFrame.from_dict(res)
+            tmp.Quantity = (
+                np.round(
+                    np.random.random(len(tmp)) ** (np.random.random(len(tmp))*100), 2)
+            )
+            ComFacBizName = tmp.ComFacBizName.unique()
+            ComFacBizName = {i: createRandomChn(len(i)) for i in ComFacBizName}
+            # print(ComFacBizName)
+            tmp.ComFacBizName = tmp.ComFacBizName.map(ComFacBizName)
+            # print(tmp.ComFacBizName)
+            # print(tmp.columns)
+            # elif kind == 'chemilist':
+            #     data = col.find({'label': {'$regex': name}})
+            #     return list(data)
+            res = tmp.to_dict(orient='records')
         return res
     else:
         return 'server error'

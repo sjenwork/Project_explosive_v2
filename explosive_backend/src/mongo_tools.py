@@ -7,6 +7,7 @@ config.read('src/conf.ini')
 
 
 def get_conn(machineName):
+    print(machineName)
     server = config[machineName]['mongo_server']
     try:
         print(f"mongodb://{server}:27017/")
