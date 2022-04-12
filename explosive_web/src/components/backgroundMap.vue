@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import Plotly from "plotly.js-dist";
+import Plotly from "plotly.js-dist-min";
 import { onMounted } from "vue";
 
 function plotmap(center = { lon: 121, lat: 23.7 }) {

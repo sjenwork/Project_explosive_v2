@@ -1,7 +1,7 @@
 <template></template>
 <script setup>
 import { ref, watch } from "vue";
-import Plotly, { reverse } from "plotly.js-dist";
+import Plotly from "plotly.js-dist-min";
 // import { Series, DataFrame } from "pandas-js";
 // import { DataFrame } from "danfojs";
 import DataFrame from "dataframe-js";
@@ -86,7 +86,7 @@ watch(
       {
         name: "",
         type: "choroplethmapbox",
-        geojson: "/taiwan_county_geojson_mini.json",
+        geojson: "./taiwan_county_geojson_mini.json",
         locations: df2.map((i) => i.city),
         text: operation === "貯存" ? df2.map((i) => i.time) : " ",
         hovertemplate: hovertemplate,

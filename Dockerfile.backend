@@ -17,8 +17,9 @@ RUN bash Miniconda3-latest-Linux-x86_64.sh -b \
     && . /root/.bashrc  \
     && conda create -n py310 python=3.10 \
     && conda activate py310 \
+    && pip install -U pip \
     && pip install sqlalchemy geopandas fastapi uvicorn gunicorn ipython \
-    && conda install -y pymssql pymongo pyodbc\
+    && conda install -y pymssql==2.2.4 pymongo pyodbc\
     && echo 'conda activate py310' >> /root/.bashrc
 
 

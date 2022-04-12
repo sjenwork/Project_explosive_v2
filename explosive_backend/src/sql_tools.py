@@ -3,80 +3,40 @@ from configparser import ConfigParser
 import socket
 import os
 from urllib.parse import quote
+import pyodbc as sqldriver
 
 
 config = ConfigParser()
 config.read('src/conf.ini')
+print(list(config.items()))
 
 
-def get_conn(machineName):
+def get_conn(machineName, name=None):
+    if name:
+        print(f'  >> call dbconnection method from {name}')
     hostname = socket.gethostname()
+
+    server = config[machineName]['sql_server']
+    port = config[machineName]['sql_port']
+    table = config[machineName]['sql_table']
+    username = config[machineName]['sql_username']
+    password = quote(config[machineName]['sql_password'])
+    sqlalchemy_driver = config[machineName]['sql_sqlalchemy_driver']
+    # info = f'''DRIVER={driver};SERVER={server};UID={username};PWD={password}'''
+
+    conn = 'mssql+pymssql://username:password@server:port/table'
     if hostname == 'JenMBP.local':
-        # import pyodbc as sqldriver
-        server = config[machineName]['sql_server']
-        port = config[machineName]['sql_port']
-        table = config[machineName]['sql_table']
-        username = config[machineName]['sql_username']
-        password = quote(config[machineName]['sql_password'])
-        sqlalchemy_driver = config[machineName]['sql_sqlalchemy_driver']
-        # info = f'''DRIVER={driver};SERVER={server};UID={username};PWD={password}'''
         conn = 'mssql+pyodbc://username:password@server:port/table?driver=sqlalchemy_driver'
-        conn = (conn
-                .replace('username', username)
-                .replace('server', server)
-                .replace('port', port)
-                .replace('table', table)
-                .replace('username', username)
-                .replace('password', password)
-                .replace('sqlalchemy_driver', sqlalchemy_driver)
-                )
-        print(conn)
-        engine = create_engine(conn)
-
-    else:
-    # elif hostname in ['force11', 'DESKTOP-EULSTCF']:
-        import pymssql as sqldriver
-        server = config[machineName]['sql_server']
-        port = config[machineName]['sql_port']
-        table = config[machineName]['sql_table']
-        username = config[machineName]['sql_username']
-        password = quote(config[machineName]['sql_password'])
-        sqlalchemy_driver = config[machineName]['sql_sqlalchemy_driver']
-        # info = f'''DRIVER={driver};SERVER={server};UID={username};PWD={password}'''
-        conn = 'mssql+pymssql://username:password@server:port/table'
-        conn = (conn
-                .replace('username', username)
-                .replace('server', server)
-                .replace('port', port)
-                .replace('table', table)
-                .replace('username', username)
-                .replace('password', password)
-                .replace('sqlalchemy_driver', sqlalchemy_driver)
-                )
-        print(conn)
-        engine = create_engine(conn)
-
-        # info = {
-        #     'server': config[machineName]['server'],
-        #     'user': config[machineName]['username'],
-        #     'password': config[machineName]['password'],
-        #     'port': config[machineName]['port'],
-        # }
-
-        # conn = sqldriver.connect(info)
-    # else:
-    #     machineName = 'docker'
-    #     import pymssql as sqldriver
-
-    #     info = {
-    #         'server': config[machineName]['server'],
-    #         'user': config[machineName]['username'],
-    #         'password': config[machineName]['password'],
-    #         'port': config[machineName]['port'],
-    #     }
-
-    #     conn = sqldriver.connect(info)
-
+    conn = (conn
+            .replace('username', username)
+            .replace('server', server)
+            .replace('port', port)
+            .replace('table', table)
+            .replace('username', username)
+            .replace('password', password)
+            .replace('sqlalchemy_driver', sqlalchemy_driver)
+            )
+    engine = create_engine(conn)
     return engine
 
 

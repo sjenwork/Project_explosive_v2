@@ -8,6 +8,7 @@ import re
 import pandas as pd
 from src.sql_tools import get_conn as connSQL, insert, table_check, fetchall
 from src.mongo_tools import get_conn as connMongo
+from src.tools import getFuncName
 import json
 import numpy as np
 import os
@@ -156,11 +157,12 @@ def save2jsonserver():
 # 讀取指引表
 
 
-def getChemMap():
+def getChemMap_All(machineName):
     sql = 'SELECT * FROM ChemiMatchMapping'
     cols = ['MatchNo', 'CASNoMatch', 'ChemiChnNameMatch', 'ChemiEngNameMatch',
             'ChemiChnAliases', 'ChemiEngAliases']
-    chemMap = pd.read_sql(sql, con=connSQL('db_chemtest_ssh'))[cols]
+    chemMap = pd.read_sql(sql, con=connSQL(
+        machineName, name=getFuncName()))[cols]
     chemMap_e2n = chemMap.set_index('ChemiEngNameMatch')[
         'CASNoMatch']  # .str.lower()
     chemMap_e2n.index = chemMap_e2n.index.str.lower()
@@ -171,7 +173,7 @@ def getChemMap():
     return {'e2n': chemMap_e2n, 'n2e': chemMap_n2e}
 
 
-def getChemMapExp():
+def getChemMap_Explosive():
     pth = pathlib.Path(os.path.abspath('.'))
     with open(pth/'src/info/explosive_nameMap.json') as f:
         namemap = json.load(f)
@@ -259,7 +261,7 @@ def wide2long(data):
         )
     data4 = pd.concat(data3).rename_axis(
         index={None: 'operation'}).reset_index()
-    data4['name'] = data4['casno'].map(getChemMapExp())
+    data4['name'] = data4['casno'].map(getChemMap_Explosive())
     return data4
 
 
@@ -324,22 +326,22 @@ def handleProcRecord(method, nlen=None):
 class proc_explosive():
     def __init__(self, machineName, method='overwrite'):
         self.method = method
-        self._getChemMap()
+        self._getChemMap(machineName)
         self._getExplosiveData(machineName)
         self.procChemName(copy.deepcopy(self.df.chem))
         # self.df3 = groupBy(self.df2)
         # self.df4 = wide2long(self.df3)
         # self.df5 = locateCounty(self.df4)
 
-    def _getChemMap(self):
-        self.chemMapAll = getChemMap()
-        self.chemMapExplosive = getChemMapExp()
+    def _getChemMap(self, machineName):
+        self.chemMapAll = getChemMap_All(machineName)
+        self.chemMapExplosive = getChemMap_Explosive()
 
     def _getExplosiveData(self, machineName):
         sql = 'SELECT * FROM ChemiPrimary.dbo.ExplosiveMergeData'
         if self.method == 'append':
             sql += ' where isProc=0'
-        df = pd.read_sql(sql, con=connSQL(machineName))
+        df = pd.read_sql(sql, con=connSQL(machineName, name=getFuncName()))
 
         df = df.drop([
             'FCOUNTY', 'FTOWN', 'FCOUNTY_TOWN', 'CountyTownship', 'UpdateDate',
@@ -375,7 +377,7 @@ class proc_explosive():
         chem.columns = pd.MultiIndex.from_tuples([('casno', '')])
         self.chem = chem
 
-        self.df = self.df.drop('chem', axis=1).merge(
+        self.df = self.df.drop('chem', axis=1, level=0).merge(
             chem, left_index=True, right_index=True)
         self.df2 = self.df.drop(self.df[self.df.casno == ''].index)
 
@@ -392,19 +394,19 @@ def saveRecords(data, colname, method):
 
 if __name__ == '__main__':
     method = 'overwrite'
-    machineName = 'db_chemtest'
+    machineName = 'mssql_chemtest'
     p = proc_explosive(machineName, method=method)
-    df3 = groupBy(p.df2)  # 以廠商名稱、地址、座標分組
-    df4 = wide2long(df3)  # 資料統整
-    df5 = locateCounty(df4)  # 座標轉換與定位
-    df5 = pd.DataFrame(df5.drop(columns=['geometry']))
-    df5.time = df5.time.astype(int)
-    df6 = statisticByCity(df5)
-    df7 = statisticByFac(df5)
-    df5_save = df5.fillna('-').to_dict(orient='records')
-    df6_save = df6.fillna('-').to_dict(orient='records')
-    df7_save = df7.fillna('-').to_dict(orient='records')
+    # df3 = groupBy(p.df2)  # 以廠商名稱、地址、座標分組
+    # df4 = wide2long(df3)  # 資料統整
+    # df5 = locateCounty(df4)  # 座標轉換與定位
+    # df5 = pd.DataFrame(df5.drop(columns=['geometry']))
+    # df5.time = df5.time.astype(int)
+    # df6 = statisticByCity(df5)
+    # df7 = statisticByFac(df5)
+    # df5_save = df5.fillna('-').to_dict(orient='records')
+    # df6_save = df6.fillna('-').to_dict(orient='records')
+    # df7_save = df7.fillna('-').to_dict(orient='records')
 
-    saveRecords(df5_save, colname='records_all', method=method)
-    saveRecords(df6_save, colname='records_city', method=method)
-    saveRecords(df6_save, colname='records_fac', method=method)
+    # saveRecords(df5_save, colname='records_all', method=method)
+    # saveRecords(df6_save, colname='records_city', method=method)
+    # saveRecords(df6_save, colname='records_fac', method=method)

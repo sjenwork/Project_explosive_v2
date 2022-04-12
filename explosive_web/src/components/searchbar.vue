@@ -137,13 +137,11 @@ watch(
 
       var finalres = [];
       let baseurl = `${import.meta.env.VITE_API_BASE_URL}/records_all`;
-
-      // let baseurl = "https://jenicksun.xn--kpry57d/explosive/statistic/api";
-      let url = `${baseurl}/?name=${chemname}&operation=${operation}`;
-
+      let url = `${baseurl}?name=${chemname}&operation=${operation}`;
       if (newTime[0] === "最新申報") {
         // 取得最新一期的
         let res = await fetch(url).then((res) => res.json());
+        console.log(res)
 
         var res2 = groupBy(res, "ComFacBizName");
         nfac.value = Object.keys(res2).length;
@@ -157,6 +155,7 @@ watch(
             );
           });
         });
+        console.log(res2)
       } else {
         // 依據時間範圍取得資料
         var paras;
