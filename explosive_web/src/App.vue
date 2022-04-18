@@ -1,7 +1,15 @@
 <template>
   <div>
     <backgroundmap> </backgroundmap>
-    <searchbar @item="searchitems" :selectedtime="selectedtime"> </searchbar>
+    <searchbar
+      @item="searchitems"
+      :selectedtime="selectedtime"
+    > </searchbar>
+    <timeController
+      @time="handletime"
+      :selectedtime="selectedtime"
+    >
+    </timeController>
     <slideController
       :data="data"
       :time="selectedtime"
@@ -9,8 +17,6 @@
       :operation="selectedoperation"
     >
     </slideController>
-    <timeController @time="handletime" :selectedtime="selectedtime">
-    </timeController>
     <displayOnMap
       :data="data"
       :time="selectedtime"

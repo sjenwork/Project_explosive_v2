@@ -87,7 +87,7 @@ async def explosive(
             query = query | {'time': {'$lte': time}}
         data = col.find(query, {'_id': False})
         res = list(data)
-        randomizedata = True
+        randomizedata = False
         if randomizedata & (kind == 'records_all'):
             tmp = pd.DataFrame.from_dict(res)
             tmp.Quantity = (

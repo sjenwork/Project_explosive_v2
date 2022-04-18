@@ -41,6 +41,7 @@
     "ChemicalChnName",
     "ChemicalEngName",
     "ComFacBizName",
+    "BusinessAdminNo",
     "ComFacBizAddress",
     "PlaceType",
     "RegionType",
@@ -58,27 +59,97 @@
     "StorageTWD97Y"
   ],
   "nameMap": [
-    ["time", ""],
-    ["deptid", ""],
-    ["sourcedept", ""],
-    ["chem", "casno"],
-    ["chem", "cname"],
-    ["chem", "ename"],
-    ["ComFacBizName", ""],
-    ["ComFacBizAddress", ""],
-    ["PlaceType", ""],
-    ["RegionType", ""],
-    ["import_info", "Quantity"],
-    ["import_info", "X"],
-    ["import_info", "Y"],
-    ["produce_info", "Quantity"],
-    ["produce_info", "X"],
-    ["produce_info", "Y"],
-    ["usage_info", "Quantity"],
-    ["usage_info", "X"],
-    ["usage_info", "Y"],
-    ["storage_info", "Quantity"],
-    ["storage_info", "X"],
-    ["storage_info", "Y"]
+    [
+      "time",
+      ""
+    ],
+    [
+      "deptid",
+      ""
+    ],
+    [
+      "sourcedept",
+      ""
+    ],
+    [
+      "chem",
+      "casno"
+    ],
+    [
+      "chem",
+      "cname"
+    ],
+    [
+      "chem",
+      "ename"
+    ],
+    [
+      "ComFacBizName",
+      ""
+    ],
+    [
+      "BusinessAdminNo",
+      ""
+    ],
+    [
+      "ComFacBizAddress",
+      ""
+    ],
+    [
+      "PlaceType",
+      ""
+    ],
+    [
+      "RegionType",
+      ""
+    ],
+    [
+      "import_info",
+      "Quantity"
+    ],
+    [
+      "import_info",
+      "X"
+    ],
+    [
+      "import_info",
+      "Y"
+    ],
+    [
+      "produce_info",
+      "Quantity"
+    ],
+    [
+      "produce_info",
+      "X"
+    ],
+    [
+      "produce_info",
+      "Y"
+    ],
+    [
+      "usage_info",
+      "Quantity"
+    ],
+    [
+      "usage_info",
+      "X"
+    ],
+    [
+      "usage_info",
+      "Y"
+    ],
+    [
+      "storage_info",
+      "Quantity"
+    ],
+    [
+      "storage_info",
+      "X"
+    ],
+    [
+      "storage_info",
+      "Y"
+    ]
   ]
 }

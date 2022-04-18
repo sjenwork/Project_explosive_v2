@@ -1,6 +1,12 @@
 <template>
-  <div class="fixed-bottom" id="timeslider">
+  <!-- <div class="" id="timeslider"> -->
+  <div
+    class="fixed-top"
+    id="timeslider"
+  >
     <Slider
+      showTooltip="focus"
+      tooltipPosition="bottom"
       v-model="value"
       :min="0"
       :max="4"
@@ -57,32 +63,47 @@ function changetime(val) {
   );
 }
 
-onMounted(() => {});
+onMounted(() => { });
 </script>
 
 <style scoped>
-@media screen and (min-width: 440px) {
+@media screen and (min-width: 340px) {
   #timeslider {
+    padding-left: 40px;
+    padding-right: 40px;
+    padding-top: 20px;
+    height: 40px;
+    width: 320px;
     margin: 10px;
-    z-index: 1000;
-    width: calc(100%-200px);
+    top: 51px;
+    border-radius: 5px;
+    z-index: 900;
+    background-color: rgba(255, 255, 255, 1);
     box-shadow: 0 2px 4px rgb(0 0 0 / 20%), 0 -1px 0px rgb(0 0 0 / 2%);
-    margin-left: 100px;
-    margin-right: 100px;
-    margin-bottom: 30px;
-    /* bottom: 10px; */
+
   }
 }
-@media screen and (max-width: 440px) {
+
+@media screen and (max-width: 340px) {
   #timeslider {
     margin: 10px;
-    z-index: 1000;
-    width: calc(100%-40px);
+    z-index: 900;
+    height: 40px;
+    width: 100%;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 1);
     box-shadow: 0 2px 4px rgb(0 0 0 / 20%), 0 -1px 0px rgb(0 0 0 / 2%);
-    margin-left: 20px;
-    margin-right: 20px;
-    margin-bottom: 20px;
-    /* bottom: 10px; */
+    margin: 0px;
+    top: 42px;
+    padding-top: 20px;
+    padding-left: 40px;
+    padding-right: 40px;
   }
+}
+
+.slider-red {
+  --slider-connect-bg: #EF4444;
+  --slider-tooltip-bg: #EF4444;
+  --slider-handle-ring-color: #EF444430;
 }
 </style>

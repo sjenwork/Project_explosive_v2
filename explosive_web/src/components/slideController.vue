@@ -1,33 +1,84 @@
 <template>
-  <div id="navbar" class="overlay" style="
+  <div
+    id="navbar"
+    class="overlay"
+    style="
       z-index: 100;
       background-color: rgba(240, 245, 240, 0.95);
       box-shadow: 0 -1px 24px rgba(0, 0, 0, 0.4);
-    ">
+    "
+  >
     <!-- <a class="closebtn" style="cursor: pointer; z-index: 100" @click="closeNav"
       >&times;</a
     > -->
-    <ul class="nav nav-tabs pt-5 mt-3" id="myTab" role="tablist">
-      <li class="nav-item w-50" role="presentation">
-        <button class="nav-link active w-100" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button"
-          role="tab" aria-controls="home" aria-selected="true">
+    <ul
+      class="nav nav-tabs"
+      id="myTab"
+      role="tablist"
+      style="margin-top: 120px;"
+    >
+      <li
+        class="nav-item w-50"
+        role="presentation"
+      >
+        <button
+          class="nav-link active w-100"
+          id="home-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#home"
+          type="button"
+          role="tab"
+          aria-controls="home"
+          aria-selected="true"
+        >
           廠商列表
         </button>
       </li>
-      <li class="nav-item w-50" role="presentation">
-        <button class="nav-link w-100" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button"
-          role="tab" aria-controls="profile" aria-selected="false">
+      <li
+        class="nav-item w-50"
+        role="presentation"
+      >
+        <button
+          class="nav-link w-100"
+          id="profile-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#profile"
+          type="button"
+          role="tab"
+          aria-controls="profile"
+          aria-selected="false"
+        >
           統計圖
         </button>
       </li>
     </ul>
-    <div class="tab-content" id="myTabContent">
-      <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab"
-        style="height: calc(100vh - 200px); overflow: scroll">
-        <table-lite :is-static-mode="true" :is-loading="table.isLoading" :columns="table.columns" :rows="table.rows"
-          :total="table.totalRecordCount" :sortable="table.sortable" @is-finished="tableLoadingFinish"></table-lite>
+    <div
+      class="tab-content"
+      id="myTabContent"
+    >
+      <div
+        class="tab-pane fade show active"
+        id="home"
+        role="tabpanel"
+        aria-labelledby="home-tab"
+        style="height: calc(100vh - 200px); overflow: scroll"
+      >
+        <table-lite
+          :is-static-mode="true"
+          :is-loading="table.isLoading"
+          :columns="table.columns"
+          :rows="table.rows"
+          :total="table.totalRecordCount"
+          :sortable="table.sortable"
+          @is-finished="tableLoadingFinish"
+        ></table-lite>
       </div>
-      <div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+      <div
+        class="tab-pane fade"
+        id="profile"
+        role="tabpanel"
+        aria-labelledby="profile-tab"
+      >
         ...
       </div>
     </div>
@@ -55,9 +106,18 @@ var table = reactive({
   isloading: false,
   columns: [
     {
+      label: "ID",
+      field: "Quantity",
+      width: "10%",
+      sortable: true,
+      // display: (row) => {
+      //   return `${row.Quantity} 公噸`;
+      // },
+    },
+    {
       label: "廠商名稱",
       field: "ComFacBizName",
-      width: "60%",
+      width: "50%",
       sortable: true,
       display: (row) => {
         return `${row.ComFacBizName}`;
@@ -72,6 +132,7 @@ var table = reactive({
         return `${row.Quantity} 公噸`;
       },
     },
+
   ],
   rows: [],
   // totalRecordCount: computed(() => {

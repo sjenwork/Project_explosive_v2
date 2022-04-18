@@ -1,39 +1,122 @@
 <template>
-  <div id="searchbar" class="fixed-top">
+  <div
+    id="searchbar"
+    class="fixed-top"
+  >
     <div class="container-xs px-0">
       <div class="row rounded-lg mx-0">
         <!-- 選單 -->
-        <div class="col-2 togglebtn noselect">&#9776;</div>
-        <!-- <div class="col-sm-2 col-2 togglebtn noselect">&#9776;</div> -->
-        <!-- 運作行為 -->
-        <div class="col-3 border-end ps-2">
-          <!-- <div class="col-sm-3 col-10 border-end ps-2"> -->
-          <multiselect v-model="selectedOperation" placeholder="行為" :options="operationOptions.map((i) => i.chn)"
-            :searchable="false" :close-on-select="true" :show-labels="false"></multiselect>
-        </div>
-        <!-- 化學物質 -->
-        <div class="col-7 ps-2">
-          <!-- <div class="offset-sm-0 col-sm-7 offset-2 col-10 ps-2"> -->
-          <multiselect v-model="selectedChem" placeholder="化學物質" open-direction="bottom" :options="chemicallist"
-            :searchable="true" :loading="isLoading" :close-on-select="true" :show-labels="false"
-            @search-change="asyncFind">
-            <template slot="tag" slot-scope="{ option, remove }">
-              <span class="custom__tag">
-                <span>{{ option.name }}</span>
-                <span class="custom__remove" @click="remove(option)">❌</span>
-              </span>
-            </template>
-            <template slot="clear" slot-scope="props">
-              <div class="multiselect__clear" v-if="selectedChem.length"
-                @mousedown.prevent.stop="clearAll(props.search)"></div>
-            </template>
-            <span slot="noResult">
-              Oops! No elements found. Consider changing the search
-              query.
-            </span>
-          </multiselect>
+        <div class="col-2 togglebtn noselect border-end">&#9776;</div>
+        <div class="col-10 border-end ps-0">
+          <multiselect
+            v-model="selectedQueryOption"
+            placeholder="依...查詢"
+            :options="queryOptions.map((i) => i.method)"
+            :searchable="false"
+            :close-on-select="true"
+            :show-labels="false"
+          ></multiselect>
         </div>
       </div>
+      <template v-if="selectedQueryOption === '運作行為、化學物質'">
+        <div class="row rounded-lg mx-0 border-top">
+          <div class="col-5 border-end  ps-0">
+            <multiselect
+              v-model="selectedOperation"
+              placeholder="運作行為"
+              :options="operationOptions.map((i) => i.chn)"
+              :searchable="false"
+              :close-on-select="true"
+              :show-labels="false"
+            ></multiselect>
+          </div>
+          <!-- 化學物質 -->
+          <div class="col-7 ps-0">
+            <multiselect
+              v-model="selectedChem"
+              placeholder="化學物質"
+              open-direction="bottom"
+              :options="chemicallist"
+              :searchable="true"
+              :loading="isLoadingChem"
+              :close-on-select="true"
+              :show-labels="false"
+              @search-change="asyncGetChem"
+            >
+              <template
+                slot="tag"
+                slot-scope="{ option, remove }"
+              >
+                <span class="custom__tag">
+                  <span>{{ option.name }}</span>
+                  <span
+                    class="custom__remove"
+                    @click="remove(option)"
+                  >❌</span>
+                </span>
+              </template>
+              <template
+                slot="clear"
+                slot-scope="props"
+              >
+                <div
+                  class="multiselect__clear"
+                  v-if="selectedChem.length"
+                  @mousedown.prevent.stop="clearAll(props.search)"
+                ></div>
+              </template>
+              <span slot="noResult">
+                Oops! No elements found. Consider changing the search
+                query.
+              </span>
+            </multiselect>
+          </div>
+        </div>
+      </template>
+      <template v-else-if="selectedQueryOption === '廠商名稱'">
+        <div class="row rounded-lg mx-0">
+          <div class="col-12 border-top ps-0">
+            <multiselect
+              v-model="selectedFac"
+              placeholder="廠商查詢"
+              open-direction="bottom"
+              :options="faclist"
+              :searchable="true"
+              :loading="isLoadingFac"
+              :close-on-select="true"
+              :show-labels="false"
+              @search-change="asyncGetFac"
+            >
+              <template
+                slot="tag"
+                slot-scope="{ option, remove }"
+              >
+                <span class="custom__tag">
+                  <span>{{ option.name }}</span>
+                  <span
+                    class="custom__remove"
+                    @click="remove(option)"
+                  >❌</span>
+                </span>
+              </template>
+              <template
+                slot="clear"
+                slot-scope="props"
+              >
+                <div
+                  class="multiselect__clear"
+                  v-if="selectedChem.length"
+                  @mousedown.prevent.stop="clearAll(props.search)"
+                ></div>
+              </template>
+              <span slot="noResult">
+                Oops! No elements found. Consider changing the search
+                query.
+              </span>
+            </multiselect>
+          </div>
+        </div>
+      </template>
     </div>
   </div>
   <!-- </div> -->
@@ -52,6 +135,13 @@ const props = defineProps({ selectedtime: Array });
 // 參數定義
 var nfac = ref("");
 
+// 搜尋方式選擇：廠商 or 化學物質
+const queryOptions = [
+  { method: '運作行為、化學物質' },
+  { method: '廠商名稱' }
+]
+var selectedQueryOption = ref("")
+
 // 運作行為選單
 const operationOptions = [
   { chn: "輸入", eng: "import" },
@@ -64,9 +154,9 @@ var selectedOperation = ref("");
 // 化學物質選單
 var selectedChem = ref("");
 var chemicallist = ref([]);
-var isLoading = ref(false);
-const asyncFind = async (query) => {
-  isLoading.value = true;
+var isLoadingChem = ref(false);
+const asyncGetChem = async (query) => {
+  isLoadingChem.value = true;
   let baseurl = import.meta.env.VITE_API_BASE_URL;
   console.log(`${baseurl}/chemilist`);
   let res = await fetch(
@@ -74,7 +164,23 @@ const asyncFind = async (query) => {
     `${baseurl}/chemilist`
   ).then((res) => res.json());
   chemicallist.value = res.map((i) => i["label"]);
-  isLoading.value = false;
+  isLoadingChem.value = false;
+};
+
+// 廠商選單
+var selectedFac = ref("")
+var faclist = ref([]);
+var isLoadingFac = ref(false);
+const asyncGetFac = async (query) => {
+  isLoadingFac.value = true;
+  let baseurl = import.meta.env.VITE_API_BASE_URL;
+  console.log(`${baseurl}/chemilist`);
+  let res = await fetch(
+    // "https://jenicksun.xn--kpry57d/explosive/statistic/chemlist/"
+    `${baseurl}/chemilist`
+  ).then((res) => res.json());
+  chemicallist.value = res.map((i) => i["label"]);
+  isLoadingChem.value = false;
 };
 
 // 函數
@@ -117,11 +223,12 @@ watch(
   // () => {
   //   return [selectedOperation, selectedChem, props.selectedtime];
   // },
-  [selectedOperation, selectedChem, () => props.selectedtime],
+  [selectedQueryOption, selectedOperation, selectedChem, () => props.selectedtime],
   async (
-    [newOperation, newChem, newTime],
-    [oldOperation, oldChem, oldTime]
+    [newQuery, newOperation, newChem, newTime],
+    [oldQuery, oldOperation, oldChem, oldTime]
   ) => {
+    console.log(newOperation)
     if (
       (newOperation != "") &
       (newChem != "") &
@@ -129,6 +236,7 @@ watch(
         (oldChem != newChem) |
         (oldTime != newTime))
     ) {
+
       // 取得對應資料
       let chemname = newChem.split(" ")[1];
       let operation = operationOptions.filter((i) => {
@@ -185,6 +293,12 @@ watch(
           chem: newChem,
         },
       });
+    } else if (
+      (newQuery != "") &
+      ((oldQuery != newQuery) |
+        (oldTime != newTime))
+    ) {
+
     }
   }
 );
@@ -254,13 +368,17 @@ onMounted(() => { });
 }
 
 ::v-deep(.multiselect__single) {
+  padding: 0px;
+  padding-left: 15px;
   margin: 0px;
   width: auto;
+
   /* width: calc(100%-20px); */
 }
 
 ::v-deep(.multiselect__tags) {
   padding: 0px;
+  padding-left: 15px;
   line-height: 41px;
   height: 41px;
 }
@@ -270,11 +388,12 @@ onMounted(() => { });
 }
 
 ::v-deep(.multiselect__placeholder) {
-  padding: 0px;
+  padding-left: 15px;
   margin: 0px;
 }
 
 ::v-deep(.multiselect__input) {
+  padding-left: 15px;
   margin: 0px;
   line-height: 41px;
   height: 41px;
