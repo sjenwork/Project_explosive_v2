@@ -1,14 +1,22 @@
 <template>
-  <backgroundMap />
+  <backgroundMap :plotdata="plotdata" />
   <Suspense>
-    <Controller />
-
+    <Controller @queryResult="handleQueryData" />
   </Suspense>
 </template>
 
 <script setup>
 import backgroundMap from './components/backgroundMap.vue';
 import Controller from './components/Controller.vue';
+import { ref } from "@vue/reactivity";
+
+var plotdata = ref()
+
+function handleQueryData(data) {
+  console.log(`  >> got queryDaya from Controller.vue`)
+  plotdata.value = data.value
+}
+
 
 </script>
 

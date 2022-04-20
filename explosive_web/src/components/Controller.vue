@@ -248,7 +248,7 @@ onMounted(() => {
 
 
 // emit and props
-const emit = defineEmits();
+const emit = defineEmits(['queryResult']);
 const props = defineProps();
 
 // 查詢參數
@@ -276,6 +276,7 @@ var asyncGetTime; // 取得時間列表
 var timeTick;
 
 var data;
+var emitData = ref();
 // toggle navbar
 var navbarStatus = ref(false)
 
@@ -343,11 +344,14 @@ watch(
     async (newVal, oldVal) => {
         var [newQuery, newOperation, newChem, newComFac, newTime] = newVal
         var [oldQuery, oldOperation, oldChem, oldComFac, oldTime] = oldVal
-        // console.log(newOperation)
+        let newTimeObject = []
+        // console.log(newChem)
         if (newQuery === '運作行為 與 化學物質') {
             if (
                 newChem !== '' &&
+                newChem !== null &&
                 newOperation !== '' &&
+                newOperation !== null &&
                 (
                     newChem !== oldChem ||
                     newOperation.chn !== oldOperation.chn ||
@@ -356,7 +360,7 @@ watch(
                 )
             ) {
                 // 將時間index轉為時間
-                let newTimeObject = []
+
                 for (let i = 0; i < newTime.length; i++) {
                     for (let j = 0; j < timeOptions.value.length; j++) {
                         if (timeOptions.value[j].index === newTime[i]) {
@@ -392,8 +396,6 @@ watch(
                     data[ind].data = await fetch(fullUrl).then(res => res.json())
 
                 }
-                console.log(data)
-
                 // 
                 let data_city = data[0].data
                 let data_fac = data[1].data.filter(i => i.lon != '')
@@ -401,7 +403,6 @@ watch(
                     console.log('      >> 查詢結果包含不同季度，需做額外統計：')
                     if (operation === 'storage') {
                         console.log('        >> 非查詢「最新申報」，選擇「最大貯存量」')
-
 
                         data_city = new DataFrame(data_city)
                             .sortBy(["Quantity", "time", "operation", "name", "city"], true)
@@ -412,7 +413,6 @@ watch(
                             .sortBy(["Quantity", "time", "operation", "name", "group"], true)
                             .dropDuplicates("operation", "name", "group")
                             .toCollection();
-
 
                     } else {
                         console.log('        >> 非查詢「最新申報」，計算「總運作量」')
@@ -434,14 +434,15 @@ watch(
                     console.log('      >> 查詢結果為最新季度，可直接使用：')
                     console.log('        >> 查詢「最新申報」')
 
-
-
                 }
                 console.log(`        >> 行政區統計：共${data[0].data.length}筆`)
                 console.log(`        >> 廠商統計：共${data[1].data.length}筆`)
-                console.log()
-                console.log(data_fac)
 
+                data[0].proc = data_city
+                data[1].proc = data_fac
+                // console.log(data)
+                emitData.value = { time: newTimeObject, chem: newChem, operation: newOperation, data: data }
+                emit('queryResult', emitData)
             }
 
         } else if (newQuery === '廠商名稱 或 統一編號') {
