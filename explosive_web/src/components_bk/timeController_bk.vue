@@ -27,6 +27,11 @@ import { time } from "/src/components/js/data.js";
 const emit = defineEmits(["time"]);
 const props = defineProps({ selectedtime: Array });
 
+const url = `${import.meta.env.VITE_API_BASE_URL}/records_time`;
+var time2 = ref(await fetch(url).then(res => res.json()));
+console.log(time2.value)
+
+const value = ref([3, 3]);
 // 定義時間，之後會需要以api更新
 // const time = [
 //   { index: 0, label: "2021 第一季" },
@@ -38,16 +43,27 @@ const props = defineProps({ selectedtime: Array });
 
 // 從App.vue傳入的初始時間
 function getPropTime() {
-  let res = time
-    .filter((i) => {
-      return props.selectedtime.includes(i.label);
-    })
-    .map((i) => {
-      return i.index;
-    });
-  return res.length == 1 ? [...res, ...res] : res;
+  let res = []
+  for (let i = 0; i < time2.value.length; i++) {
+    for (let j = 0; j < props.selectedtime.length; j++) {
+      if (time2.value[i].label === props.selectedtime[j]) {
+        res.push(i)
+      }
+    }
+  }
+  console.log(res)
+  return res
+  // let res = time2
+  //   .filter((i) => {
+  //     return props.selectedtime.includes(i.label);
+  //   })
+  //   .map((i) => {
+  //     return i.index;
+  //   });
+  // console.log(res)
+  // return res.length == 1 ? [...res, ...res] : res;
 }
-const value = ref(getPropTime());
+// const value = ref(getPropTime());
 
 // 時間軸tooltip文字
 function format(val) {
@@ -75,7 +91,7 @@ onMounted(() => { });
     height: 40px;
     width: 320px;
     margin: 10px;
-    top: 51px;
+    top: 91px;
     border-radius: 5px;
     z-index: 900;
     background-color: rgba(255, 255, 255, 1);
@@ -94,7 +110,7 @@ onMounted(() => { });
     background-color: rgba(255, 255, 255, 1);
     box-shadow: 0 2px 4px rgb(0 0 0 / 20%), 0 -1px 0px rgb(0 0 0 / 2%);
     margin: 0px;
-    top: 42px;
+    top: 91px;
     padding-top: 20px;
     padding-left: 40px;
     padding-right: 40px;

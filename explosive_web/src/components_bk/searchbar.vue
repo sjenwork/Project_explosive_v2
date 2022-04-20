@@ -18,7 +18,7 @@
           ></multiselect>
         </div>
       </div>
-      <template v-if="selectedQueryOption === '運作行為、化學物質'">
+      <template v-if="selectedQueryOption === '運作行為 與 化學物質'">
         <div class="row rounded-lg mx-0 border-top">
           <div class="col-5 border-end  ps-0">
             <multiselect
@@ -73,7 +73,7 @@
           </div>
         </div>
       </template>
-      <template v-else-if="selectedQueryOption === '廠商名稱'">
+      <template v-else-if="selectedQueryOption === '廠商名稱 或 統一編號'">
         <div class="row rounded-lg mx-0">
           <div class="col-12 border-top ps-0">
             <multiselect
@@ -86,6 +86,7 @@
               :close-on-select="true"
               :show-labels="false"
               @search-change="asyncGetFac"
+              label="ComFacBizName"
             >
               <template
                 slot="tag"
@@ -137,10 +138,11 @@ var nfac = ref("");
 
 // 搜尋方式選擇：廠商 or 化學物質
 const queryOptions = [
-  { method: '運作行為、化學物質' },
-  { method: '廠商名稱' }
+  { method: '運作行為 與 化學物質' },
+  { method: '廠商名稱 或 統一編號' }
 ]
-var selectedQueryOption = ref("")
+// var selectedQueryOption = ref("")
+var selectedQueryOption = ref("運作行為 與 化學物質")
 
 // 運作行為選單
 const operationOptions = [
@@ -158,7 +160,6 @@ var isLoadingChem = ref(false);
 const asyncGetChem = async (query) => {
   isLoadingChem.value = true;
   let baseurl = import.meta.env.VITE_API_BASE_URL;
-  console.log(`${baseurl}/chemilist`);
   let res = await fetch(
     // "https://jenicksun.xn--kpry57d/explosive/statistic/chemlist/"
     `${baseurl}/chemilist`
@@ -168,19 +169,19 @@ const asyncGetChem = async (query) => {
 };
 
 // 廠商選單
-var selectedFac = ref("")
+var selectedFac = ref({})
 var faclist = ref([]);
 var isLoadingFac = ref(false);
 const asyncGetFac = async (query) => {
   isLoadingFac.value = true;
   let baseurl = import.meta.env.VITE_API_BASE_URL;
-  console.log(`${baseurl}/chemilist`);
   let res = await fetch(
     // "https://jenicksun.xn--kpry57d/explosive/statistic/chemlist/"
-    `${baseurl}/chemilist`
+    `${baseurl}/records_fac`
   ).then((res) => res.json());
-  chemicallist.value = res.map((i) => i["label"]);
-  isLoadingChem.value = false;
+  faclist.value = res;
+  // faclist.value = res.map((i) => `${i["BusinessAdminNo"]} ${i["ComFacBizName"]}`);
+  isLoadingFac.value = false;
 };
 
 // 函數
@@ -223,20 +224,21 @@ watch(
   // () => {
   //   return [selectedOperation, selectedChem, props.selectedtime];
   // },
-  [selectedQueryOption, selectedOperation, selectedChem, () => props.selectedtime],
+  [selectedFac, selectedOperation, selectedChem, () => props.selectedtime],
   async (
-    [newQuery, newOperation, newChem, newTime],
-    [oldQuery, oldOperation, oldChem, oldTime]
+    [newFac, newOperation, newChem, newTime],
+    [oldFac, oldOperation, oldChem, oldTime]
   ) => {
-    console.log(newOperation)
+    // console.log(newTime, oldTime)
+    // case 1: 依據化學物質與運作行為取得統計資料
     if (
-      (newOperation != "") &
-      (newChem != "") &
-      ((oldOperation != newOperation) |
-        (oldChem != newChem) |
-        (oldTime != newTime))
+      (newOperation != "") &&
+      (newChem != "") &&
+      ((oldOperation !== newOperation) ||
+        (oldChem !== newChem) ||
+        (oldTime !== newTime))
     ) {
-
+      console.log('搜尋化學物質...')
       // 取得對應資料
       let chemname = newChem.split(" ")[1];
       let operation = operationOptions.filter((i) => {
@@ -244,61 +246,90 @@ watch(
       })[0].eng;
 
       var finalres = [];
-      let baseurl = `${import.meta.env.VITE_API_BASE_URL}/records_all`;
-      let url = `${baseurl}?name=${chemname}&operation=${operation}`;
-      if (newTime[0] === "最新申報") {
-        // 取得最新一期的
-        let res = await fetch(url).then((res) => res.json());
-        console.log(res)
+      // 取得依據行政區的統計api連結
+      let baseurl_city = `${import.meta.env.VITE_API_BASE_URL}/statistic_city`;
+      let url_city = `${baseurl_city}?name=${chemname}&operation=${operation}&time_ge=${newTime[0]}&time_le=${newTime[1]}`;
+      // 取得依據廠商名稱的統計api連結
+      let baseurl_fac = `${import.meta.env.VITE_API_BASE_URL}/statistic_fac`;
+      let url_fac = `${baseurl_fac}?name=${chemname}&operation=${operation}&time_ge=${newTime[0]}&time_le=${newTime[1]}`;
+      // 取得資料
 
-        var res2 = groupBy(res, "ComFacBizName");
-        nfac.value = Object.keys(res2).length;
-        Object.values(res2).forEach((i) => {
-          var res3 = groupBy(i, "deptid");
-          Object.values(res3).forEach((j) => {
-            finalres.push(
-              j.sort(function (a, b) {
-                return parseFloat(b.time) - parseFloat(a.time);
-              })[0]
-            );
-          });
-        });
-        console.log(res2)
-      } else {
-        // 依據時間範圍取得資料
-        var paras;
-        var time = [];
-        newTime.forEach((i) => {
-          time.push(
-            i
-              .replace(" 第一季", "01")
-              .replace(" 第二季", "04")
-              .replace(" 第三季", "07")
-              .replace(" 第四季", "10")
-          );
-        });
-        if (time[1] === "最新申報") {
-          // let time = newTime[0];
-          paras = `Time_gte=${time[0]}`;
-        } else {
-          paras = `Time_gte=${time[0]}&Time_lte=${time[1]}`;
-        }
-        url = `${url}&${paras}`;
-        finalres = await fetch(url).then((res) => res.json());
-      }
+      console.log(url_city)
+      console.log(url_fac)
+      let res_city = await fetch(url_city).then((res) => res.json());
+      let res_fac = await fetch(url_fac).then((res) => res.json());
+      console.log('res_city:', res_city.length)
+      console.log('res_fac:', res_fac.length)
+
       emit("item", {
-        res: finalres,
+        res_city: res_city,
+        res_fac: res_fac,
         selected: {
           operation: newOperation,
           chem: newChem,
+          fac: '',
         },
       });
     } else if (
-      (newQuery != "") &
-      ((oldQuery != newQuery) |
-        (oldTime != newTime))
+      (Object.keys(newFac).length !== 0) &&
+      ((oldFac.group !== newFac.group) ||
+        (oldTime !== newTime))
     ) {
+      console.log('搜尋廠商...')
+      // 取得對應資料
+      let facGroupId = newFac.group;
 
+      var finalres = [];
+      let baseurl = `${import.meta.env.VITE_API_BASE_URL}/records_all`;
+      let url = `${baseurl}?groupid=${facGroupId}`;
+      if (true) {
+        if (newTime[0] === "最新申報") {
+          // 取得最新一期的
+          let res = await fetch(url).then((res) => res.json());
+
+          var res2 = groupBy(res, "ComFacBizName");
+          // nfac.value = Object.keys(res2).length;
+          Object.values(res2).forEach((i) => {
+            var res3 = groupBy(i, "deptid");
+            Object.values(res3).forEach((j) => {
+              finalres.push(
+                j.sort(function (a, b) {
+                  return parseFloat(b.time) - parseFloat(a.time);
+                })[0]
+              );
+            });
+          });
+        } else {
+          // 依據時間範圍取得資料
+          var paras;
+          var time = [];
+          newTime.forEach((i) => {
+            time.push(
+              i
+                .replace(" 第一季", "01")
+                .replace(" 第二季", "04")
+                .replace(" 第三季", "07")
+                .replace(" 第四季", "10")
+            );
+          });
+          if (time[1] === "最新申報") {
+            // let time = newTime[0];
+            paras = `Time_gte=${time[0]}`;
+          } else {
+            paras = `Time_gte=${time[0]}&Time_lte=${time[1]}`;
+          }
+          url = `${url}&${paras}`;
+          finalres = await fetch(url).then((res) => res.json());
+        }
+        emit("item", {
+          res: finalres,
+          selected: {
+            operation: '',
+            chem: '',
+            fac: newFac
+          },
+        });
+      }
     }
   }
 );

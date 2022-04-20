@@ -54,8 +54,9 @@ async def explosive(
         label: str = None,
         operation: str = None,
         time: int = None,
-        time_ge: int = None,
-        time_le: int = None,
+        time_ge: int | str = None,
+        time_le: int | str = None,
+        groupid: int = None,
 ):
     # async def explosive(kind: str):
     # client = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -66,7 +67,6 @@ async def explosive(
     if db:
         col = db[kind]
         query = {}
-        # if kind == 'records_all':
         if ComFacBizName is not None:
             query = query | {'ComFacBizName': {'$regex': ComFacBizName}}
         if casno is not None:
@@ -82,11 +82,44 @@ async def explosive(
         if time is not None:
             query = query | {'time': time}
         if time_ge is not None:
-            query = query | {'time': {'$gte': time}}
+            if (time_ge != '最新申報') & (time_ge != 'latest'):
+                query = query | {'time': {'$gte': time_ge}}
+            else:
+                query = query
         if time_le is not None:
-            query = query | {'time': {'$lte': time}}
-        data = col.find(query, {'_id': False})
-        res = list(data)
+            if (time_le != '最新申報') & (time_le != 'latest'):
+                query = query | {'time': {'$lte': time_le}}
+            else:
+                query = query
+        if groupid is not None:
+            query = query | {'group': groupid}
+
+        data = list(col.find(query, {'_id': False}))
+        if (time_le == '最新申報') | (time_le == 'latest'):
+            data = data
+            print(2)
+        if (time_ge == '最新申報') | (time_ge == 'latest'):
+            print(1)
+            tmp = pd.DataFrame.from_dict(data)
+            print(tmp.iloc[:, :-1])
+            print(tmp.head(1).T)
+            if kind == 'statistic_city':
+                res = (
+                    tmp[
+                        tmp.groupby(
+                            ['operation', 'name', 'casno', 'city']
+                        ).time.transform(max) == tmp.time]
+                )
+            elif kind == 'statistic_fac':
+                res = (
+                    tmp[
+                        tmp.groupby(
+                            ['operation', 'name', 'ComFacBizName']
+                        ).time.transform(max) == tmp.time]
+                )
+            data = res.to_dict(orient='records')
+        res = data
+
         randomizedata = False
         if randomizedata & (kind == 'records_all'):
             tmp = pd.DataFrame.from_dict(res)

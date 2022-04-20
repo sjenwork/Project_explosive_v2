@@ -152,9 +152,6 @@ watch(
     table.rows = newVal[0];
     // css
     let pagination = document.querySelector(".vtl-paging");
-    console.log(pagination);
-
-    console.log(newVal[0]);
   }
 );
 

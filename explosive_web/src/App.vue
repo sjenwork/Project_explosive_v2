@@ -1,57 +1,15 @@
 <template>
-  <div>
-    <backgroundmap> </backgroundmap>
-    <searchbar
-      @item="searchitems"
-      :selectedtime="selectedtime"
-    > </searchbar>
-    <timeController
-      @time="handletime"
-      :selectedtime="selectedtime"
-    >
-    </timeController>
-    <slideController
-      :data="data"
-      :time="selectedtime"
-      :chem="selectedchem"
-      :operation="selectedoperation"
-    >
-    </slideController>
-    <displayOnMap
-      :data="data"
-      :time="selectedtime"
-      :chem="selectedchem"
-      :operation="selectedoperation"
-    >
-    </displayOnMap>
-  </div>
+  <backgroundMap />
+  <Suspense>
+    <Controller />
+
+  </Suspense>
 </template>
 
 <script setup>
-import backgroundmap from "./components/backgroundMap.vue";
-import slideController from "./components/slideController.vue";
-import searchbar from "./components/searchbar.vue";
-import timeController from "./components/timeController.vue";
-import displayOnMap from "./components/displayOnMap.vue";
-import { ref } from "@vue/reactivity";
+import backgroundMap from './components/backgroundMap.vue';
+import Controller from './components/Controller.vue';
 
-// var selectedtime = ref(["2021 第一季", "最新申報"]);
-var selectedtime = ref(["最新申報", "最新申報"]);
-var selectedchem = ref("");
-var selectedoperation = ref("");
-var data = ref([]);
-
-function searchitems(item) {
-  selectedchem.value = item.selected.chem;
-  selectedoperation.value = item.selected.operation;
-  data.value = item.res;
-}
-function handletime(item) {
-  if (item.length == 1) {
-    item = [...item, ...item];
-  }
-  selectedtime.value = item.map((i) => i.label);
-}
 </script>
 
 
@@ -64,3 +22,4 @@ function handletime(item) {
   color: #2c3e50;
 }
 </style>
+./components/sliderController.vue./components/sliderController.vue

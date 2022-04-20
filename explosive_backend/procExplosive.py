@@ -222,7 +222,7 @@ def wide2long(data):
     data2 = {}
     for operation in ['import', 'produce', 'usage', 'storage']:
         cols1 = ['time', 'deptid', 'casno', 'PlaceType',
-                 'RegionType', 'ComFacBizName', 'BusinessAdminNo']
+                 'RegionType', 'ComFacBizName', 'BusinessAdminNo', 'group']
         cols2 = [f'{operation}_info-{i}' for i in ['Quantity', 'X', 'Y']]
         cols = cols1 + cols2
         data2[operation] = data[cols]
@@ -246,7 +246,7 @@ def wide2long(data):
             item[item[f'{key}_info-X'] != '-']
             .assign(count=0)
             .groupby([
-                'ComFacBizName', 'BusinessAdminNo', 'casno', 'time', 'deptid',
+                'group', 'ComFacBizName', 'BusinessAdminNo', 'casno', 'time', 'deptid',
                 f'{key}_info-X', f'{key}_info-Y'])
             .agg(aggfun)
         )
@@ -254,7 +254,7 @@ def wide2long(data):
         item_2 = (
             item[item[f'{key}_info-X'] == '-']
             .set_index([
-                'ComFacBizName', 'BusinessAdminNo', 'casno', 'time', 'deptid',
+                'group', 'ComFacBizName', 'BusinessAdminNo', 'casno', 'time', 'deptid',
                 f'{key}_info-X', f'{key}_info-Y'])
         )
 
@@ -305,7 +305,7 @@ def statisticByCity(data):
 
 def statisticByFac(data):
     data2 = data.groupby([
-        "time", "operation", "name", "lon", "lat", "ComFacBizName", "BusinessAdminNo", 'deptid']
+        "time", "operation", "name", "lon", "lat", "group", "ComFacBizName", "BusinessAdminNo", 'deptid']
     ).agg({'Quantity': 'sum'}).reset_index()
     return data2
 
@@ -395,9 +395,38 @@ def saveRecords(data, colname, machineName, method):
 
 
 def getFacList(df5):
-    data = copy.deepcopy(df5)[['ComFacBizName', 'BusinessAdminNo']]
+    data = copy.deepcopy(df5)[['ComFacBizName', 'BusinessAdminNo', 'group']]
     data2 = data.drop_duplicates(subset=data.columns)
     return data2
+
+
+def getTimeList(df5):
+    timeList = (
+        pd.DataFrame(
+            copy.deepcopy(df5).time.unique(), columns=['time']
+        ).astype({'time': str})
+        .sort_values(by='time')
+        .reset_index(drop=True)
+    ).reset_index()
+    timeList['timeString'] = (
+        timeList['time']
+        .str.replace('01$', 'Q1', regex=True)
+        .str.replace('04$', 'Q2', regex=True)
+        .str.replace('07$', 'Q3', regex=True)
+        .str.replace('10$', 'Q4', regex=True)
+    )
+    timeList['label'] = (
+        timeList['timeString']
+        .str.replace('Q1', ' 第一季', regex=True)
+        .str.replace('Q2', ' 第二季', regex=True)
+        .str.replace('Q3', ' 第三季', regex=True)
+        .str.replace('Q4', ' 第四季', regex=True)
+    )
+    timeList = pd.concat(
+        [timeList,
+         pd.DataFrame([[timeList['index'].max()+1, '最新申報', 'latest', '最新申報']], columns=timeList.columns)]
+    )
+    return timeList  # .to_dict(orient='records')
 
 
 if __name__ == '__main__':
@@ -429,6 +458,7 @@ if __name__ == '__main__':
         df6 = statisticByCity(df5)
         df7 = statisticByFac(df5)
         df8 = getFacList(df5)
+        df9 = getTimeList(df5)
 
     if save:
         paras = {'orient': 'records', 'indent': 2, 'force_ascii': False}
@@ -436,6 +466,7 @@ if __name__ == '__main__':
         df6.fillna('-').to_json('tmp/df6.json', **paras)
         df7.fillna('-').to_json('tmp/df7.json', **paras)
         df8.fillna('-').to_json('tmp/df8.json', **paras)
+        df9.fillna('-').to_json('tmp/df9.json', **paras)
 
     if load:
         df5 = pd.read_json('tmp/df5.json')
@@ -448,8 +479,11 @@ if __name__ == '__main__':
     df6_save = df6.fillna('-').assign(updatetime=now).to_dict(orient='records')
     df7_save = df7.fillna('-').assign(updatetime=now).to_dict(orient='records')
     df8_save = df8.fillna('-').assign(updatetime=now).to_dict(orient='records')
+    df9_save = df9.fillna('-').assign(updatetime=now).to_dict(orient='records')
     saveRecords(df5_save, colname='records_all', **save_paras)
     saveRecords(df6_save, colname='statistic_city', **save_paras)
     saveRecords(df7_save, colname='statistic_fac', **save_paras)
+    saveRecords(df8_save, colname='records_fac', **save_paras)
+    saveRecords(df9_save, colname='records_time', **save_paras)
 
     # saveRecords(df8_save, colname='statistic_fac', **save_paras)
