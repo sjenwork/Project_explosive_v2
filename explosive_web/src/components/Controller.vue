@@ -67,7 +67,46 @@
                             :total="table.totalRecordCount"
                             :sortable="table.sortable"
                             @is-finished="tableLoadingFinish"
-                        ></table-lite>
+                            @toggleinfo="handleToggleInfo"
+                        >
+                            <td
+                                colspan="3"
+                                style="background-color: rgba(200,200,200,.8);"
+                            >
+                                <table
+                                    class="table table-hover"
+                                    style="margin-top:30px; margin-bottom: 30px;"
+                                >
+                                    <thead>
+                                        <tr>
+                                            <th>資料來源</th>
+                                            <th>申報期別</th>
+                                            <th>運作行為</th>
+                                            <th>化學物質</th>
+                                            <th>運作量</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template v-for="comfac in comFacDetail">
+                                            <tr>
+                                                <td>{{ comfac.deptid }}</td>
+                                                <td>{{
+                                                    operationOptions.filter(i => i.eng === comfac.operation)[0].chn
+                                                }}</td>
+                                                <td>{{
+                                                    String(comfac.time)
+                                                        .replace(/01$/, 'Q1').replace(/04$/, 'Q2')
+                                                        .replace(/07$/, 'Q3').replace(/10$/, 'Q4')
+                                                }}</td>
+                                                <td>{{ comfac.name }}</td>
+                                                <td>{{ comfac.Quantity }}</td>
+                                            </tr>
+                                        </template>
+
+                                    </tbody>
+                                </table>
+                            </td>
+                        </table-lite>
                     </div>
                     <div
                         class="tab-pane fade"
@@ -279,6 +318,9 @@ var data;
 var emitData = ref();
 // toggle navbar
 var navbarStatus = ref(false)
+// toggle table-lite row
+var handleToggleInfo
+var comFacDetail = ref([])
 
 
 
@@ -336,8 +378,62 @@ if (defineParameter) {
 
     // 初始化時間
     selectedTime.value = [timeOptions.value.length - 1, timeOptions.value.length - 1]
+
+    // handle toggle row from table-lite
+    handleToggleInfo = async (row) => {
+        console.log(row)
+        let url = `${baseurl}/statistic_fac_merged?groupid=${row.group}`
+        let tmp = await fetch(url).then(res => res.json())
+        console.log(tmp)
+        tmp = new DataFrame(tmp)
+            .sortBy(["name", "operation", "time", "deptid"])
+            .toCollection();
+        console.log(tmp)
+        comFacDetail.value = tmp
+    }
 }
 
+var table = reactive({
+    isloading: false,
+    columns: [
+        {
+            label: "統一編號",
+            field: "BusinessAdminNo",
+            width: "10%",
+            sortable: true,
+            // display: (row) => {
+            //   return `${row.Quantity} 公噸`;
+            // },
+        },
+        {
+            label: "廠商名稱",
+            field: "ComFacBizName",
+            width: "50%",
+            sortable: true,
+            display: (row) => {
+                return `${row.ComFacBizName}`;
+            },
+        },
+        {
+            label: "運作量",
+            field: "Quantity",
+            width: "40%",
+            sortable: true,
+            display: (row) => {
+                return `${row.Quantity.toFixed(2)} 公噸`;
+            },
+        },
+
+    ],
+    rows: [],
+    // totalRecordCount: computed(() => {
+    //   return table.rows.length;
+    // }),
+    sortable: {
+        order: "id",
+        sort: "asc",
+    },
+});
 
 watch(
     [selectedQuery, selectedOperation, selectedChem, selectedComFac, selectedTime],
@@ -388,6 +484,11 @@ watch(
                         url: `${baseurl}/statistic_fac`,
                         para: `?name=${chnChemName}&operation=${operation}&time_ge=${t0}&time_le=${t1}`
                     },
+                    {
+                        dataType: 'faccon_merged',
+                        url: `${baseurl}/statistic_fac_merged`,
+                        para: `?name=${chnChemName}&operation=${operation}&time_ge=${t0}&time_le=${t1}`
+                    },
 
                 ];
                 for (let ind of data.keys()) {
@@ -398,7 +499,8 @@ watch(
                 }
                 // 
                 let data_city = data[0].data
-                let data_fac = data[1].data.filter(i => i.lon != '')
+                let data_fac = data[1].data//.filter(i => i.lon != '')
+                let data_fac_merged = data[2].data//.filter(i => i.lon != '')
                 if (t0 !== '最新申報') {
                     console.log('      >> 查詢結果包含不同季度，需做額外統計：')
                     if (operation === 'storage') {
@@ -410,9 +512,15 @@ watch(
                             .toCollection();
 
                         data_fac = new DataFrame(data_fac)
-                            .sortBy(["Quantity", "time", "operation", "name", "group"], true)
+                            .sortBy(["Quantity", "time"], true)
+                            .dropDuplicates("operation", "name", "group", "lon", "lat")
+                            .toCollection();
+
+                        data_fac_merged = new DataFrame(data_fac_merged)
+                            .sortBy(["Quantity", "time",], true)
                             .dropDuplicates("operation", "name", "group")
                             .toCollection();
+
 
                     } else {
                         console.log('        >> 非查詢「最新申報」，計算「總運作量」')
@@ -429,8 +537,18 @@ watch(
                             .rename("aggregation", "Quantity")
                             .toCollection();
 
+                        // console.log(data_fac_merged)
+                        data_fac_merged = new DataFrame(data_fac_merged)
+                            .groupBy("operation", "name", "group")
+                            .aggregate((group) => group.stat.sum("Quantity"))
+                            .rename("aggregation", "Quantity")
+                            .toCollection();
+
+
                     }
                 } else {
+                    // data_fac_merged_proc = data_fac_merged
+
                     console.log('      >> 查詢結果為最新季度，可直接使用：')
                     console.log('        >> 查詢「最新申報」')
 
@@ -440,9 +558,12 @@ watch(
 
                 data[0].proc = data_city
                 data[1].proc = data_fac
+                data[2].proc = data_fac_merged
                 // console.log(data)
                 emitData.value = { time: newTimeObject, chem: newChem, operation: newOperation, data: data }
                 emit('queryResult', emitData)
+                console.log(data_fac)
+                table.rows = data_fac_merged
             }
 
         } else if (newQuery === '廠商名稱 或 統一編號') {
@@ -467,47 +588,7 @@ watch(
     }
 );
 
-var table = reactive({
-    isloading: false,
-    columns: [
-        {
-            label: "ID",
-            field: "Quantity",
-            width: "10%",
-            sortable: true,
-            // display: (row) => {
-            //   return `${row.Quantity} 公噸`;
-            // },
-        },
-        {
-            label: "廠商名稱",
-            field: "ComFacBizName",
-            width: "50%",
-            sortable: true,
-            display: (row) => {
-                return `${row.ComFacBizName}`;
-            },
-        },
-        {
-            label: "運作量",
-            field: "Quantity",
-            width: "40%",
-            sortable: true,
-            display: (row) => {
-                return `${row.Quantity} 公噸`;
-            },
-        },
 
-    ],
-    rows: [],
-    // totalRecordCount: computed(() => {
-    //   return table.rows.length;
-    // }),
-    sortable: {
-        order: "id",
-        sort: "asc",
-    },
-});
 
 
 
@@ -567,7 +648,7 @@ div.card-body {
 
 ::v-deep(.vtl-tbody-td div) {
     overflow-x: scroll;
-    max-height: 24px;
+    max-height: 48px;
 }
 
 ::v-deep(.multiselect__single) {

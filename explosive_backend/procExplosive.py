@@ -304,9 +304,28 @@ def statisticByCity(data):
 
 
 def statisticByFac(data):
+    # 群組相同，但廠商名稱、統編、座標不同的，會被拆分成多個項目（給繪製地圖用，不同座標可標示在不同座標）
+    # 不同來源須分開
+    # 另須移除沒有座標的
     data2 = data.groupby([
         "time", "operation", "name", "lon", "lat", "group", "ComFacBizName", "BusinessAdminNo", 'deptid']
     ).agg({'Quantity': 'sum'}).reset_index()
+    data2 = data2[data2.lon != '']
+    return data2
+
+
+def statisticByFac_forTable(data):
+    # 依據群組與來源做整合，只要群組相同，就整合在一起，若是有多個廠商、多個座標、多個來源、多個統編，會條列式
+    # 給表格用
+    data2 = data.groupby([
+        "time", "operation", "name",  "group", "deptid"]
+    ).agg({
+        'Quantity': 'sum',
+        'ComFacBizName': lambda i: ','.join(set(i)),
+        'BusinessAdminNo': lambda i: ','.join(set(i)),
+        'lon': lambda i: ','.join(map(str, set(i))),
+        'lat': lambda i: ','.join(map(str, set(i))),
+    }).reset_index()
     return data2
 
 
@@ -457,8 +476,9 @@ if __name__ == '__main__':
         df5.time = df5.time.astype(int)
         df6 = statisticByCity(df5)
         df7 = statisticByFac(df5)
-        df8 = getFacList(df5)
-        df9 = getTimeList(df5)
+        df8 = statisticByFac_forTable(df5)
+        df9 = getFacList(df5)
+        df10 = getTimeList(df5)
 
     if save:
         paras = {'orient': 'records', 'indent': 2, 'force_ascii': False}
@@ -467,23 +487,28 @@ if __name__ == '__main__':
         df7.fillna('-').to_json('tmp/df7.json', **paras)
         df8.fillna('-').to_json('tmp/df8.json', **paras)
         df9.fillna('-').to_json('tmp/df9.json', **paras)
+        df10.fillna('-').to_json('tmp/df10.json', **paras)
 
     if load:
         df5 = pd.read_json('tmp/df5.json')
         df6 = pd.read_json('tmp/df6.json')
         df7 = pd.read_json('tmp/df7.json')
         df8 = pd.read_json('tmp/df8.json')
-    # df8 =
+        df9 = pd.read_json('tmp/df9.json')
+    # df9 =
 
     df5_save = df5.fillna('-').assign(updatetime=now).to_dict(orient='records')
     df6_save = df6.fillna('-').assign(updatetime=now).to_dict(orient='records')
     df7_save = df7.fillna('-').assign(updatetime=now).to_dict(orient='records')
     df8_save = df8.fillna('-').assign(updatetime=now).to_dict(orient='records')
     df9_save = df9.fillna('-').assign(updatetime=now).to_dict(orient='records')
+    df10_save = df10.fillna(
+        '-').assign(updatetime=now).to_dict(orient='records')
     saveRecords(df5_save, colname='records_all', **save_paras)
     saveRecords(df6_save, colname='statistic_city', **save_paras)
     saveRecords(df7_save, colname='statistic_fac', **save_paras)
-    saveRecords(df8_save, colname='records_fac', **save_paras)
-    saveRecords(df9_save, colname='records_time', **save_paras)
+    saveRecords(df8_save, colname='statistic_fac_merged', **save_paras)
+    saveRecords(df9_save, colname='records_fac', **save_paras)
+    saveRecords(df10_save, colname='records_time', **save_paras)
 
-    # saveRecords(df8_save, colname='statistic_fac', **save_paras)
+    # saveRecords(df9_save, colname='statistic_fac', **save_paras)

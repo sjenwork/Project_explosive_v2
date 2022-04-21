@@ -110,7 +110,7 @@ async def explosive(
                             ['operation', 'name', 'casno', 'city']
                         ).time.transform(max) == tmp.time]
                 )
-            elif kind == 'statistic_fac':
+            elif (kind == 'statistic_fac') | (kind == 'statistic_fac_merged'):
                 res = (
                     tmp[
                         tmp.groupby(
