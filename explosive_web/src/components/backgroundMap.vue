@@ -8,90 +8,157 @@
 <script setup>
 import Plotly from "plotly.js-dist-min";
 import { onMounted, watch } from "vue";
+import { clearPlotlyTrace, calculateCenter, response2Resize } from "./js/utility.js"
 
-const props = defineProps({ plotdata: Object });
+const props = defineProps({ plotdata: Object, focusdata: Object });
+
 
 watch(
-  () => [props.plotdata],
-  ([newVal], [oldVal]) => {
-    var time = newVal.time
-    var chem = newVal.chem
-    var operation = newVal.operation
-    var [data_city, data_fac] = newVal.data
+  () => [props.focusdata],
+  ([newfocusdata], [oldfocusdata]) => {
+    // ------------------------------------------------------
+    // 標記選取的廠商
+    console.log(newfocusdata)
+    if (newfocusdata) {
+      console.log('plot focus data')
+      clearPlotlyTrace('fac')
+      if (newfocusdata.state) {
+        var data = newfocusdata.row
+        var plot = [
+          {
+            lon: data.map((i) => i.lon),
+            lat: data.map((i) => i.lat),
+            text: data.map((i) => `${i.ComFacBizName}`),
+            type: "scattermapbox",
+            // hoverinfo: "text",
+            name: "",
+            // hovertext: data_fac.map((i) => i.ComFacBizName),
+            hovertemplate: "%{text}",
+            marker: {
+              color: "rgba(240,249,19,.9)",
+              size: 20,
+            },
+          },
+        ];
 
-    var data_city_plot = data_city.proc
-    var data_fac_plot = data_fac.proc
 
-    var hovertemplate = "%{location}<br>TIMEINFO%{z:.2f}公噸";
-    if (operation.chn === "貯存") {
-      if (time[0].time === "最新申報") {
-        hovertemplate = hovertemplate.replace(
-          "TIMEINFO",
-          "最新期別：%{text}<br>"
-        );
-      } else {
-        hovertemplate = hovertemplate.replace(
-          "TIMEINFO",
-          "最大期別：%{text}<br>"
-        );
+        Plotly.addTraces("map", plot);
+        if (data.map((i) => i.lat)[0]) {
+          Plotly.animate('map', {
+            layout: {
+              mapbox: {
+                zoom: 9,
+                center: {
+                  lon: data.map((i) => i.lon)[0] - 0.2,
+                  lat: data.map((i) => i.lat)[0]
+                }
+              }
+            }
+          }, {
+            transition: {
+              duration: 3000,
+            }
+          })
+        }
       }
-    } else {
-      hovertemplate = hovertemplate.replace("TIMEINFO", "");
     }
+    // 標記選取的廠商 end
+    // ------------------------------------------------------
+  });
+watch(
+  () => [props.plotdata],
+  ([newPlotVal], [oldPlotVal]) => {
+    // ------------------------------------------------------
+    // 繪製
+    if (oldPlotVal !== newPlotVal) {
+      var time = newPlotVal.time
+      var chem = newPlotVal.chem
+      var operation = newPlotVal.operation
+      var [data_city, data_fac] = newPlotVal.data
 
-    let size = [...data_fac_plot].map((i) => i.Quantity);
-    size = size.map((j) => j / Math.max(...size) + 16);
-    var plot = [
-      {
-        name: "",
-        type: "choroplethmapbox",
-        geojson: "./taiwan_county_geojson_mini.json",
-        locations: [...data_city_plot].map((i) => i.city),
-        text: operation.chn === "貯存" ? [...data_city_plot].map((i) => i.time) : " ",
-        hovertemplate: hovertemplate,
-        hoverlabel: { font: { size: 22 } },
-        featureidkey: "properties.NAME_2014",
-        z: [...data_city_plot].map((i) => i.Quantity),
-        showscale: false,
-        zmin: 0,
-        colorscale: [
-          [0, "rgba(255,200,200,.5)"],
-          [1, "rgba(222,30,20,.7)"],
-        ],
-      },
-      {
-        lon: [...data_fac_plot].map((i) => i.lon),
-        lat: [...data_fac_plot].map((i) => i.lat),
-        text: [...data_fac_plot].map((i) => `${i.ComFacBizName}:<br> ${i.time} <br> ${i.Quantity}`),
-        type: "scattermapbox",
-        // hoverinfo: "text",
-        name: "",
-        // hovertext: data_fac.map((i) => i.ComFacBizName),
-        hovertemplate: "%{text} 公噸",
-        marker: {
-          color: "rgba(58,99,73,.95)",
-          size: size,
+      var data_city_plot = data_city.proc
+      var data_fac_plot = data_fac.proc
+
+      var hovertemplate = "%{location}<br>TIMEINFO%{z:.2f}公噸";
+      if (operation.chn === "貯存") {
+        if (time[0].time === "最新申報") {
+          hovertemplate = hovertemplate.replace(
+            "TIMEINFO",
+            "最新期別：%{text}<br>"
+          );
+        } else {
+          hovertemplate = hovertemplate.replace(
+            "TIMEINFO",
+            "最大期別：%{text}<br>"
+          );
+        }
+      } else {
+        hovertemplate = hovertemplate.replace("TIMEINFO", "");
+      }
+
+      let size = [...data_fac_plot].map((i) => i.Quantity);
+      size = size.map((j) => j / Math.max(...size) + 16);
+      var plot = [
+        {
+          name: "",
+          type: "choroplethmapbox",
+          geojson: "./taiwan_county_geojson_mini.json",
+          locations: [...data_city_plot].map((i) => i.city),
+          text: operation.chn === "貯存" ? [...data_city_plot].map((i) => i.time) : " ",
+          hovertemplate: hovertemplate,
+          hoverlabel: { font: { size: 22 } },
+          featureidkey: "properties.NAME_2014",
+          z: [...data_city_plot].map((i) => i.Quantity),
+          showscale: false,
+          zmin: 0,
+          colorscale: [
+            [0, "rgba(255,200,200,.5)"],
+            [1, "rgba(222,30,20,.7)"],
+          ],
         },
-      },
-    ];
+        {
+          lon: [...data_fac_plot].map((i) => i.lon),
+          lat: [...data_fac_plot].map((i) => i.lat),
+          text: [...data_fac_plot].map((i) => `${i.ComFacBizName}:<br> ${i.time} <br> ${i.Quantity}`),
+          type: "scattermapbox",
+          // hoverinfo: "text",
+          name: "",
+          // hovertext: data_fac.map((i) => i.ComFacBizName),
+          hovertemplate: "%{text} 公噸",
+          marker: {
+            color: "rgba(58,99,73,.95)",
+            size: size,
+          },
+        },
+      ];
 
-    // 移除前一次的圖層
-    let traceLen = document.querySelector("#map").data.length;
-    let drop = [];
-    for (let i = 1; i < traceLen; i++) {
-      drop.push(-i);
+      // 移除前一次的圖層
+      let traceLen = document.querySelector("#map").data.length;
+      let drop = [];
+      for (let i = 1; i < traceLen; i++) {
+        drop.push(-i);
+      }
+      clearPlotlyTrace('all')
+      // Plotly.deleteTraces("map", drop);
+      Plotly.addTraces("map", plot);
+
+      // console.log(document.querySelector("#map").data.length)
+      // Plotly.deleteTraces("map", [2]);
     }
-    Plotly.deleteTraces("map", drop);
-    Plotly.addTraces("map", plot);
-
-
-
-
+    // 繪製 end
+    // ------------------------------------------------------
+    // console.log(document.querySelector("#map").data.length)
   })
 
 
 function initMap(center = { lon: 121, lat: 23.7 }) {
   var data = [
+    {
+      type: "scattermapbox",
+      text: [],
+      lon: [],
+      lat: [],
+    },
     {
       type: "scattermapbox",
       text: [],
@@ -143,8 +210,11 @@ function initMap(center = { lon: 121, lat: 23.7 }) {
   Plotly.newPlot("map", data, layout, config);
 }
 
+
+
 onMounted(() => {
-  initMap();
+  response2Resize()
+  initMap({ lon: calculateCenter(), lat: 23.7 });
 });
 
 

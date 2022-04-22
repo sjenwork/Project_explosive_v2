@@ -95,29 +95,30 @@ async def explosive(
             query = query | {'group': groupid}
 
         data = list(col.find(query, {'_id': False}))
-        if (time_le == '最新申報') | (time_le == 'latest'):
-            data = data
-            print(2)
-        if (time_ge == '最新申報') | (time_ge == 'latest'):
-            print(1)
-            tmp = pd.DataFrame.from_dict(data)
-            print(tmp.iloc[:, :-1])
-            print(tmp.head(1).T)
-            if kind == 'statistic_city':
-                res = (
-                    tmp[
-                        tmp.groupby(
-                            ['operation', 'name', 'casno', 'city']
-                        ).time.transform(max) == tmp.time]
-                )
-            elif (kind == 'statistic_fac') | (kind == 'statistic_fac_merged'):
-                res = (
-                    tmp[
-                        tmp.groupby(
-                            ['operation', 'name', 'ComFacBizName']
-                        ).time.transform(max) == tmp.time]
-                )
-            data = res.to_dict(orient='records')
+        if len(data) > 0:
+            if (time_le == '最新申報') | (time_le == 'latest'):
+                data = data
+                print(2)
+            if (time_ge == '最新申報') | (time_ge == 'latest'):
+                print(1)
+                tmp = pd.DataFrame.from_dict(data)
+                print(tmp.iloc[:, :-1])
+                print(tmp.head(1).T)
+                if kind == 'statistic_city':
+                    res = (
+                        tmp[
+                            tmp.groupby(
+                                ['operation', 'name', 'casno', 'city']
+                            ).time.transform(max) == tmp.time]
+                    )
+                elif (kind == 'statistic_fac') | (kind == 'statistic_fac_merged'):
+                    res = (
+                        tmp[
+                            tmp.groupby(
+                                ['operation', 'name', 'ComFacBizName']
+                            ).time.transform(max) == tmp.time]
+                    )
+                data = res.to_dict(orient='records')
         res = data
 
         randomizedata = False

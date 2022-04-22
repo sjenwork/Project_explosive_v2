@@ -59,6 +59,10 @@
                         aria-labelledby="home-tab"
                         style="height: calc(100vh - 200px); overflow: scroll"
                     >
+                        <div style="text-align: left; margin-top: 5px; margin-bottom: 5px;">
+                            <label>查詢:</label>
+                            <input v-model="searchInTable" />
+                        </div>
                         <table-lite
                             :is-static-mode="true"
                             :is-loading="table.isLoading"
@@ -68,43 +72,52 @@
                             :sortable="table.sortable"
                             @is-finished="tableLoadingFinish"
                             @toggleinfo="handleToggleInfo"
+                            :toggleOpen="toggleOpen"
                         >
                             <td
                                 colspan="3"
-                                style="background-color: rgba(200,200,200,.8);"
+                                style="background-color: rgba(200,240,200,.5);overflow-x:scroll; overflow-x: scroll;"
                             >
-                                <table
-                                    class="table table-hover"
-                                    style="margin-top:30px; margin-bottom: 30px;"
-                                >
-                                    <thead>
-                                        <tr>
-                                            <th>資料來源</th>
-                                            <th>申報期別</th>
-                                            <th>運作行為</th>
-                                            <th>化學物質</th>
-                                            <th>運作量</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <template v-for="comfac in comFacDetail">
+                                <div style="margin-top:10px; margin-bottom: 30px;width:240%">
+                                    <table
+                                        class="table table-hover"
+                                        style="table-layout: fixed;width:100%"
+                                    >
+                                        <thead>
                                             <tr>
-                                                <td>{{ comfac.deptid }}</td>
-                                                <td>{{
-                                                    operationOptions.filter(i => i.eng === comfac.operation)[0].chn
-                                                }}</td>
-                                                <td>{{
-                                                    String(comfac.time)
-                                                        .replace(/01$/, 'Q1').replace(/04$/, 'Q2')
-                                                        .replace(/07$/, 'Q3').replace(/10$/, 'Q4')
-                                                }}</td>
-                                                <td>{{ comfac.name }}</td>
-                                                <td>{{ comfac.Quantity }}</td>
+                                                <th>資料來源</th>
+                                                <th>運作行為</th>
+                                                <th>申報期別</th>
+                                                <th>化學物質</th>
+                                                <th>運作量</th>
+                                                <th>廠商名稱</th>
+                                                <th>統一編號</th>
+                                                <th style="width:20%">廠商名稱列表</th>
                                             </tr>
-                                        </template>
+                                        </thead>
+                                        <tbody>
+                                            <template v-for="comfac in comFacDetail">
+                                                <tr>
+                                                    <td>{{ dept_e2c[comfac.deptid] }}</td>
+                                                    <td>{{
+                                                            operationOptions.filter(i => i.eng === comfac.operation)[0].chn
+                                                    }}</td>
+                                                    <td>{{
+                                                            String(comfac.time)
+                                                                .replace(/01$/, 'Q1').replace(/04$/, 'Q2')
+                                                                .replace(/07$/, 'Q3').replace(/10$/, 'Q4')
+                                                    }}</td>
+                                                    <td>{{ comfac.name }}</td>
+                                                    <td>{{ comfac.Quantity }}</td>
+                                                    <td>{{ comfac.ComFacBizName }}</td>
+                                                    <td>{{ comfac.BusinessAdminNo }}</td>
+                                                    <td>{{ comfac.ComFacBizName_list }}</td>
+                                                </tr>
+                                            </template>
 
-                                    </tbody>
-                                </table>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </td>
                         </table-lite>
                     </div>
@@ -140,6 +153,8 @@
                                 :searchable="false"
                                 :close-on-select="true"
                                 :show-labels="false"
+                                @Select="handleSelectQuery"
+                                :allowEmpty=false
                             ></multiselect>
                         </div>
                     </div>
@@ -272,22 +287,17 @@
 
 <script setup>
 import { onMounted, reactive, ref } from "@vue/runtime-core";
-import { watch } from "vue";
+import { watch, computed } from "vue";
 import Multiselect from "vue-multiselect";
 import TableLite from "vue3-table-lite";
 import Slider from "@vueform/slider";
 import DataFrame from "dataframe-js";
-
-
-onMounted(() => {
-    // timeOptions.value = await asyncGetTime()
-
-});
-
+// import Plotly from "plotly.js-dist-min";
+import { clearPlotlyTrace } from "./js/utility.js"
 
 
 // emit and props
-const emit = defineEmits(['queryResult']);
+const emit = defineEmits(['queryResult', 'focusResult']);
 const props = defineProps();
 
 // 查詢參數
@@ -317,13 +327,37 @@ var timeTick;
 var data;
 var emitData = ref();
 // toggle navbar
-var navbarStatus = ref(false)
+var navbarStatus = document.querySelector('body').clientWidth > 760 ? ref(true) : ref(false)
+
 // toggle table-lite row
 var handleToggleInfo
 var comFacDetail = ref([])
+var toggleOpen = ref(false)
+var searchInTable = ref('')
+var tableData = reactive({ rows: [] })
 
 
+var handleSelectQuery
+var handleSelectChem
+// var clearPlotlyTrace
 
+// table
+
+var dept_e2c = ref({
+    'MND': '國防部',
+    'MOEA005': '經濟部礦務局',
+    'MOEA001': '經濟部中部辦公室',
+    'EPZA': '"科技產業園區(經濟部加工出口區)"',
+    'MOST001': '科技部竹科管理局',
+    'MOST002': '科技部中科管理局',
+    'MOST003': '科技部南科管理局',
+    'MOI001': '內政部消防署',
+    'MOL001': '勞動部職安署',
+    'COA001': '農委會防檢局',
+    'TCSB': '環保署化學局',
+    'MOTC001': '交通部臺灣港務公司',
+    'MOF001': '財政部關務署'
+})
 
 
 
@@ -346,6 +380,7 @@ if (defineParameter) {
         { chn: "使用", eng: "usage" },
     ];
     selectedOperation.value = { chn: "貯存", eng: "storage" }
+    selectedOperation.value = { chn: "使用", eng: "usage" }
 
     // 取得化學物質列表
     asyncGetChem = async (query) => {
@@ -379,17 +414,43 @@ if (defineParameter) {
     // 初始化時間
     selectedTime.value = [timeOptions.value.length - 1, timeOptions.value.length - 1]
 
+    // 處理選擇Query選項
+    handleSelectQuery = (selected) => {
+        if (selected !== selectedQuery.value) {
+            clearPlotlyTrace('all')
+            tableData.rows = []
+            selectedChem.value = ''
+        }
+    };
+
+
+
+
+
     // handle toggle row from table-lite
-    handleToggleInfo = async (row) => {
-        console.log(row)
-        let url = `${baseurl}/statistic_fac_merged?groupid=${row.group}`
-        let tmp = await fetch(url).then(res => res.json())
-        console.log(tmp)
-        tmp = new DataFrame(tmp)
-            .sortBy(["name", "operation", "time", "deptid"])
-            .toCollection();
-        console.log(tmp)
-        comFacDetail.value = tmp
+    handleToggleInfo = async (info) => {
+        let state = info.state
+        console.log(state)
+        if (state) {
+            let row = info.row
+            let tmp, url
+            // 取得廠商統計資料
+            url = `${baseurl}/statistic_fac_merged?groupid=${row.group}`
+            tmp = await fetch(url).then(res => res.json())
+            tmp = new DataFrame(tmp)
+                .sortBy(["name", "operation", "time", "deptid"])
+                .toCollection();
+            comFacDetail.value = tmp
+            console.log('here')
+            toggleOpen.value = true
+            tmp = [...emitData.value.data[1].proc].filter(i => i.group === row.group)
+            emit('focusResult', { state: state, row: tmp })
+            console.log(111)
+        } else {
+            toggleOpen.value = false
+            console.log(toggleOpen.value)
+            clearPlotlyTrace('fac')
+        }
     }
 }
 
@@ -399,7 +460,7 @@ var table = reactive({
         {
             label: "統一編號",
             field: "BusinessAdminNo",
-            width: "10%",
+            width: "35%",
             sortable: true,
             // display: (row) => {
             //   return `${row.Quantity} 公噸`;
@@ -408,7 +469,7 @@ var table = reactive({
         {
             label: "廠商名稱",
             field: "ComFacBizName",
-            width: "50%",
+            width: "35%",
             sortable: true,
             display: (row) => {
                 return `${row.ComFacBizName}`;
@@ -417,7 +478,7 @@ var table = reactive({
         {
             label: "運作量",
             field: "Quantity",
-            width: "40%",
+            width: "30%",
             sortable: true,
             display: (row) => {
                 return `${row.Quantity.toFixed(2)} 公噸`;
@@ -425,15 +486,89 @@ var table = reactive({
         },
 
     ],
-    rows: [],
-    // totalRecordCount: computed(() => {
-    //   return table.rows.length;
-    // }),
+    rows: computed(() => {
+
+        return tableData.rows.filter(
+            x =>
+                String(x.BusinessAdminNo).includes(String(searchInTable.value)) ||
+                x.ComFacBizName.toLowerCase().includes(searchInTable.value.toLowerCase())
+        );
+    }),
+
+    totalRecordCount: computed(() => {
+        return table.rows.length;
+    }),
+
     sortable: {
         order: "id",
         sort: "asc",
     },
 });
+
+// 監控化學物質選項model狀態
+watch([selectedChem], ([newVal], [oldVal]) => {
+    console.log(newVal, oldVal)
+    if (newVal && oldVal) {
+        if (newVal.chnname !== oldVal.chnname) {
+            clearPlotlyTrace('all')
+            // tableData.rows = []
+            toggleOpen.value = false
+        }
+    } else {
+        clearPlotlyTrace('all')
+        tableData.rows = []
+        toggleOpen.value = false
+    }
+    console.log(toggleOpen.value)
+});
+
+//  ---------------------------------
+//  ---------- 以下為 Watch ----------
+
+// 監控運作行為選項model狀態
+watch([selectedOperation], ([newVal], [oldVal]) => {
+    console.log(newVal, oldVal)
+    if (newVal && oldVal) {
+        if (newVal.chnname !== oldVal.chnname) {
+            clearPlotlyTrace('all')
+            // tableData.rows = []
+            toggleOpen.value = false
+        }
+    } else {
+        clearPlotlyTrace('all')
+        tableData.rows = []
+        toggleOpen.value = false
+    }
+});
+
+// 監控時間選項model狀態
+watch(selectedTime,
+    (newTime, oldTime) => {
+        // console.log(newTime[0], oldTime[0], newTime[1], oldTime[1])
+        if (
+            newTime[0] !== oldTime[0] || newTime[1] !== oldTime[1]
+        ) {
+
+            clearPlotlyTrace('all')
+            // tableData.rows = []
+            toggleOpen.value = false
+        }
+    })
+
+// watch 表格搜尋選項
+watch(
+    () => searchInTable.value,
+    (val_old, val_new) => {
+        if (
+            val_old.length > 0 ||
+            val_old !== val_new
+        ) {
+            toggleOpen.value = false
+            clearPlotlyTrace('fac')
+        }
+    }
+
+);
 
 watch(
     [selectedQuery, selectedOperation, selectedChem, selectedComFac, selectedTime],
@@ -443,20 +578,18 @@ watch(
         let newTimeObject = []
         // console.log(newChem)
         if (newQuery === '運作行為 與 化學物質') {
+
             if (
-                newChem !== '' &&
-                newChem !== null &&
-                newOperation !== '' &&
-                newOperation !== null &&
                 (
-                    newChem !== oldChem ||
-                    newOperation.chn !== oldOperation.chn ||
-                    newTime[0] !== oldTime[0] ||
-                    newTime[1] !== oldTime[1]
+                    (newChem && oldChem && (newChem.chnname !== oldChem.chnname)) ||
+                    (newOperation && oldOperation && (newOperation.chn !== oldOperation.chn)) ||
+                    (oldTime[0] !== newTime[0] || oldTime[1] !== newTime[1])
+                ) ||
+                (
+                    (!oldChem && newChem) || (!oldOperation && newOperation)
                 )
             ) {
                 // 將時間index轉為時間
-
                 for (let i = 0; i < newTime.length; i++) {
                     for (let j = 0; j < timeOptions.value.length; j++) {
                         if (timeOptions.value[j].index === newTime[i]) {
@@ -521,7 +654,6 @@ watch(
                             .dropDuplicates("operation", "name", "group")
                             .toCollection();
 
-
                     } else {
                         console.log('        >> 非查詢「最新申報」，計算「總運作量」')
 
@@ -535,35 +667,35 @@ watch(
                             .groupBy("operation", "name", "group", "deptid", "lon", "lat", "ComFacBizName", "BusinessAdminNo")
                             .aggregate((group) => group.stat.sum("Quantity"))
                             .rename("aggregation", "Quantity")
+                            .map(row => row.set("time", `${t0}-${t1}`))
                             .toCollection();
 
-                        // console.log(data_fac_merged)
-                        data_fac_merged = new DataFrame(data_fac_merged)
+                        var tmp = new DataFrame(data_fac_merged)
+                        data_fac_merged = tmp
                             .groupBy("operation", "name", "group")
                             .aggregate((group) => group.stat.sum("Quantity"))
                             .rename("aggregation", "Quantity")
+                            .join(tmp.select('ComFacBizName', 'BusinessAdminNo', 'lon', 'lat', 'group'), 'group', 'left')
                             .toCollection();
-
-
                     }
                 } else {
-                    // data_fac_merged_proc = data_fac_merged
-
                     console.log('      >> 查詢結果為最新季度，可直接使用：')
                     console.log('        >> 查詢「最新申報」')
-
                 }
-                console.log(`        >> 行政區統計：共${data[0].data.length}筆`)
-                console.log(`        >> 廠商統計：共${data[1].data.length}筆`)
 
                 data[0].proc = data_city
                 data[1].proc = data_fac
                 data[2].proc = data_fac_merged
+
+                console.log(`        >> 行政區統計：共${data[0].data.length}筆`)
+                console.log(`        >> 廠商統計：共${data[1].data.length}筆`)
+                console.log(`        >> 行政區統計：去重複後：共${data[0].proc.length}筆`)
+                console.log(`        >> 廠商統計：去重複後：共${data[1].proc.length}筆`)
                 // console.log(data)
                 emitData.value = { time: newTimeObject, chem: newChem, operation: newOperation, data: data }
                 emit('queryResult', emitData)
-                console.log(data_fac)
-                table.rows = data_fac_merged
+                tableData.rows = data_fac_merged
+                console.log(toggleOpen.value)
             }
 
         } else if (newQuery === '廠商名稱 或 統一編號') {
@@ -591,15 +723,14 @@ watch(
 
 
 
-
 function tableLoadingFinish() {
+    // 修改換頁樣式
     let pagination = document.querySelector(".vtl-paging");
     [...pagination.children].forEach((i) => {
         i.className = i.className
             .replace("col-sm-12", "col-12")
             .replace("col-md-4", "");
     });
-    console.log(pagination);
 }
 
 </script>
@@ -611,7 +742,7 @@ function tableLoadingFinish() {
         z-index: 1000;
         width: 320px;
         box-shadow: 0 2px 4px rgb(0 0 0 / 20%), 0 -1px 0px rgb(0 0 0 / 2%);
-        background-color: white;
+        background-color: rgba(255, 255, 255, 0.807);
         border-radius: 5px;
         /* border: 1px solid grey; */
         margin: 10px;
@@ -646,6 +777,20 @@ div.card-body {
     padding: 1px;
 }
 
+::v-deep(.vtl-table) {
+    overflow-x: hidden;
+}
+
+::v-deep(.vtl-row),
+::v-deep(.vtl-card),
+::v-deep(.vtl),
+::v-deep(.vtl-card-body),
+::v-deep(.vtl-table),
+::v-deep(.vtl-tbody-td),
+::v-deep(.vtl-tbody) {
+    background-color: rgba(240, 245, 240, 0);
+}
+
 ::v-deep(.vtl-tbody-td div) {
     overflow-x: scroll;
     max-height: 48px;
@@ -657,6 +802,7 @@ div.card-body {
     margin: 0px;
     width: auto;
     line-height: 41px;
+    background-color: none;
 }
 
 ::v-deep(.multiselect__tags) {
@@ -664,6 +810,9 @@ div.card-body {
     padding-left: 15px;
     line-height: 41px;
     height: 41px;
+    background: rgba(255, 255, 255, 0);
+    border-radius: 0px;
+    border-width: 0px;
 }
 
 ::v-deep(.multiselect__placeholder) {
@@ -678,6 +827,7 @@ div.card-body {
     height: 41px;
     width: auto;
     /* width: calc(100%-20px); */
+    background-color: none;
 }
 
 .noselect {
@@ -694,11 +844,11 @@ div.card-body {
     padding-right: 0px;
 }
 
-::v-deep(.multiselect__tags) {
+/* ::v-deep(.multiselect__tags) {
     background: rgba(255, 255, 255, 0);
     border-radius: 0px;
     border-width: 0px;
-}
+} */
 
 @media screen and (min-width: 340px) {
     #timeslider {
@@ -731,7 +881,8 @@ div.card-body {
 
 #searchResult {
     /* width: */
-    margin-top: 135px;
+    margin-top: 155px;
+    margin-bottom: 40px;
 }
 
 .slide-leave-active,
@@ -748,13 +899,12 @@ div.card-body {
 }
 
 #navbar {
-
     width: 340px;
     height: 100vh;
     background-color: rgb(0, 0, 0);
     background-color: rgba(0, 0, 0, 0.9);
     overflow-x: hidden;
-    background-color: rgba(240, 245, 240, 0.95);
+    background-color: rgba(240, 245, 240, 0.9);
     box-shadow: 0 -1px 24px rgba(0, 0, 0, 0.4);
 }
 </style>

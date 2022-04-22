@@ -181,7 +181,7 @@ def getChemMap_Explosive():
     return namemap
 
 
-def groupBy(data, cols=[('ComFacBizName', ''), ('ComFacBizAddress', ''), ('import_info', 'X'), ('import_info', 'Y')]):
+def groupByFac(data, cols=[('ComFacBizName', ''), ('ComFacBizAddress', ''), ('import_info', 'X'), ('import_info', 'Y')]):
     data = copy.deepcopy(data)
     # data = copy.deepcopy(p.df2)
     col_merge = ['-'.join(i) if i[1] != '' else i[0] for i in data.columns]
@@ -211,18 +211,33 @@ def groupBy(data, cols=[('ComFacBizName', ''), ('ComFacBizAddress', ''), ('impor
         lambda i: i.iloc[0])
     grp2admino = sn[['group', 'BusinessAdminNo']].groupby(['group']).agg(
         lambda i: i.iloc[0])
+    sn['ComFacBizName_list'] = sn['group'].map(
+        sn.groupby('group').ComFacBizName.agg(
+            lambda i: (','.join(set(i))))
+    )
+    sn['BusinessAdminNo_list'] = sn['group'].map(
+        sn.groupby('group').BusinessAdminNo.agg(
+            lambda i: (','.join(map(str, set(i)))))
+    )
     sn['ComFacBizName'] = sn['group'].map(grp2name.ComFacBizName)
     sn['BusinessAdminNo'] = sn['group'].map(grp2admino.BusinessAdminNo)
-    data2 = pd.concat([data.drop(columns=['ComFacBizName', 'BusinessAdminNo']),
-                      sn['ComFacBizName'], sn['BusinessAdminNo'], sn['group']], axis=1)
-    return data2
+
+    # data2 = pd.concat([data, sn['group']], axis=1)
+    data2 = pd.concat([
+        data.drop(columns=['ComFacBizName', 'BusinessAdminNo']),
+        sn['ComFacBizName'], sn['BusinessAdminNo'], sn['group'],
+        sn['ComFacBizName_list'], sn['BusinessAdminNo_list']
+    ], axis=1)
+    return data2, sn
 
 
 def wide2long(data):
     data2 = {}
     for operation in ['import', 'produce', 'usage', 'storage']:
         cols1 = ['time', 'deptid', 'casno', 'PlaceType',
-                 'RegionType', 'ComFacBizName', 'BusinessAdminNo', 'group']
+                 'RegionType', 'ComFacBizName', 'BusinessAdminNo', 'group',
+                 'ComFacBizName_list', 'BusinessAdminNo_list'
+                 ]
         cols2 = [f'{operation}_info-{i}' for i in ['Quantity', 'X', 'Y']]
         cols = cols1 + cols2
         data2[operation] = data[cols]
@@ -247,6 +262,7 @@ def wide2long(data):
             .assign(count=0)
             .groupby([
                 'group', 'ComFacBizName', 'BusinessAdminNo', 'casno', 'time', 'deptid',
+                'ComFacBizName_list', 'BusinessAdminNo_list',
                 f'{key}_info-X', f'{key}_info-Y'])
             .agg(aggfun)
         )
@@ -255,6 +271,7 @@ def wide2long(data):
             item[item[f'{key}_info-X'] == '-']
             .set_index([
                 'group', 'ComFacBizName', 'BusinessAdminNo', 'casno', 'time', 'deptid',
+                'ComFacBizName_list', 'BusinessAdminNo_list',
                 f'{key}_info-X', f'{key}_info-Y'])
         )
 
@@ -308,7 +325,8 @@ def statisticByFac(data):
     # 不同來源須分開
     # 另須移除沒有座標的
     data2 = data.groupby([
-        "time", "operation", "name", "lon", "lat", "group", "ComFacBizName", "BusinessAdminNo", 'deptid']
+        "time", "operation", "name", "lon", "lat", "group", "ComFacBizName", "BusinessAdminNo", 'deptid',
+        "ComFacBizName_list", "BusinessAdminNo_list"]
     ).agg({'Quantity': 'sum'}).reset_index()
     data2 = data2[data2.lon != '']
     return data2
@@ -323,6 +341,8 @@ def statisticByFac_forTable(data):
         'Quantity': 'sum',
         'ComFacBizName': lambda i: ','.join(set(i)),
         'BusinessAdminNo': lambda i: ','.join(set(i)),
+        'ComFacBizName_list': lambda i: ','.join(set(i)),
+        'BusinessAdminNo_list': lambda i: ','.join(set(i)),
         'lon': lambda i: ','.join(map(str, set(i))),
         'lat': lambda i: ','.join(map(str, set(i))),
     }).reset_index()
@@ -352,7 +372,7 @@ class proc_explosive():
         self._getChemMap(machineName)
         self._getExplosiveData(machineName)
         self.procChemName(copy.deepcopy(self.df.chem))
-        # self.df3 = groupBy(self.df2)
+        # self.df3 = groupByFac(self.df2)
         # self.df4 = wide2long(self.df3)
         # self.df5 = locateCounty(self.df4)
 
@@ -462,14 +482,13 @@ if __name__ == '__main__':
     if not test:
         machineName = 'mssql_chemtest'
         p = proc_explosive(machineName, method=method)
-        df3 = groupBy(p.df2,
-                      cols=[
-                          ('ComFacBizName', ''),
-                          ('ComFacBizAddress', ''),
-                          ("BusinessAdminNo", ''),
-                          ('import_info', 'X'),
-                          ('import_info', 'Y'),
-                      ])  # 以廠商名稱、地址、座標分組
+        df3, sn = groupByFac(p.df2, cols=[
+            ('ComFacBizName', ''),
+            ('ComFacBizAddress', ''),
+            ("BusinessAdminNo", ''),
+            ('import_info', 'X'),
+            ('import_info', 'Y'),
+        ])  # 以廠商名稱、地址、座標分組
         df4 = wide2long(df3)  # 資料統整
         df5 = locateCounty(df4)  # 座標轉換與定位
         df5 = pd.DataFrame(df5.drop(columns=['geometry']))
