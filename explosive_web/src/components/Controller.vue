@@ -59,9 +59,23 @@
                         aria-labelledby="home-tab"
                         style="height: calc(100vh - 200px); overflow: scroll"
                     >
-                        <div style="text-align: left; margin-top: 5px; margin-bottom: 5px;">
-                            <label>查詢:</label>
-                            <input v-model="searchInTable" />
+                        <div
+                            style="text-align: left; margin: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+                            <label>查詢：
+                                <input v-model="searchInTable" />
+                            </label>
+                            <span
+                                class="download"
+                                @click="downloadResult"
+                            >
+                                <label for="">報表下載</label>
+                                <font-awesome-icon :icon="faArrowCircleDown" />
+                            </span>
+                            <!-- <font-awesome-icon :icon="['fas', 'bars']" /> -->
+                            <!-- <img
+                                src="/src/assets/download.jpeg"
+                                style="height:30px"
+                            /> -->
                         </div>
                         <table-lite
                             :is-static-mode="true"
@@ -294,6 +308,10 @@ import Slider from "@vueform/slider";
 import DataFrame from "dataframe-js";
 // import Plotly from "plotly.js-dist-min";
 import { clearPlotlyTrace } from "./js/utility.js"
+import { faArrowCircleDown } from '@fortawesome/free-solid-svg-icons'
+import { utils, write } from "xlsx";
+import { saveAs } from "file-saver";
+
 
 
 // emit and props
@@ -341,6 +359,8 @@ var handleSelectQuery
 var handleSelectChem
 // var clearPlotlyTrace
 
+var downloadResult
+
 // table
 
 var dept_e2c = ref({
@@ -359,6 +379,32 @@ var dept_e2c = ref({
     'MOF001': '財政部關務署'
 })
 
+
+const json2arr = async (data) => {
+    // console.log(data);
+    // const buildData = (data) => {
+    return new Promise((resolve, reject) => {
+        // 最後所有的資料會存在這
+        let arrayData = [];
+
+        // 取 data 的第一個 Object 的 key 當表頭
+        let arrayTitle = Object.keys(data[0]);
+        arrayData.push(arrayTitle);
+
+        // 取出每一個 Object 裡的 value，push 進新的 Array 裡
+        Array.prototype.forEach.call(data, (d) => {
+            let items = [];
+            Array.prototype.forEach.call(arrayTitle, (title) => {
+                let item = d[title] || "無";
+                items.push(item);
+            });
+            arrayData.push(items);
+        });
+
+        resolve(arrayData);
+    });
+    // };
+};
 
 
 var defineParameter = true
@@ -452,6 +498,37 @@ if (defineParameter) {
             clearPlotlyTrace('fac')
         }
     }
+
+    downloadResult = async (i) => {
+        if (data) {
+            var wb = utils.book_new();
+            wb.Props = {
+                Title: "整併報表",
+                Subject: "易爆物統整",
+                Author: "化學雲",
+                CreatedDate: new Date(),
+            };
+            wb.SheetNames.push("Sheet 1");
+            var ws_data = await json2arr(data[2].proc);
+            var ws = utils.aoa_to_sheet(ws_data);
+            wb.Sheets["Sheet 1"] = ws;
+            var wbout = write(wb, { bookType: "xlsx", type: "binary" });
+            function s2ab(s) {
+                var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
+                var view = new Uint8Array(buf); //create uint8array as viewer
+                for (var i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xff; //convert to octet
+                return buf;
+            }
+            saveAs(
+                new Blob([s2ab(wbout)], { type: "application/octet-stream" }),
+                "易爆物統計報表.xlsx"
+            );
+
+
+        } else {
+            alert("尚未查詢出任何結果。\n此下載檔案功能為輸出查詢結果，請先進行查詢後再進行下載！")
+        }
+    }
 }
 
 var table = reactive({
@@ -505,6 +582,9 @@ var table = reactive({
     },
 });
 
+//  ---------------------------------
+//  ---------- 以下為 Watch ----------
+
 // 監控化學物質選項model狀態
 watch([selectedChem], ([newVal], [oldVal]) => {
     console.log(newVal, oldVal)
@@ -522,8 +602,6 @@ watch([selectedChem], ([newVal], [oldVal]) => {
     console.log(toggleOpen.value)
 });
 
-//  ---------------------------------
-//  ---------- 以下為 Watch ----------
 
 // 監控運作行為選項model狀態
 watch([selectedOperation], ([newVal], [oldVal]) => {
@@ -570,6 +648,7 @@ watch(
 
 );
 
+// watch 化學物質搜尋
 watch(
     [selectedQuery, selectedOperation, selectedChem, selectedComFac, selectedTime],
     async (newVal, oldVal) => {
@@ -710,12 +789,8 @@ watch(
                 console.log(" >> 廠商查詢 ")
                 console.log(`    >> 搜尋${newComFac}、${newTime}`)
             }
-            // console.log(newQuery)
-            // console.log(newChem)
-            // console.log(newComFac)
-            // console.log(newTime)
-        }
 
+        }
 
     }
 );
@@ -818,6 +893,7 @@ div.card-body {
 ::v-deep(.multiselect__placeholder) {
     padding-left: 15px;
     margin: 0px;
+    background-color: none;
 }
 
 ::v-deep(.multiselect__input) {
@@ -906,5 +982,20 @@ div.card-body {
     overflow-x: hidden;
     background-color: rgba(240, 245, 240, 0.9);
     box-shadow: 0 -1px 24px rgba(0, 0, 0, 0.4);
+}
+
+.download {
+    border: 1px solid black;
+    background-color: rgba(200, 240, 200, .5);
+    padding: 2px;
+    border-radius: 5px;
+}
+
+.download:hover {
+    color: red
+}
+
+.tab-content input {
+    width: 130px;
 }
 </style>

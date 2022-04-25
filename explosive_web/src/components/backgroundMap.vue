@@ -159,12 +159,6 @@ function initMap(center = { lon: 121, lat: 23.7 }) {
       lon: [],
       lat: [],
     },
-    {
-      type: "scattermapbox",
-      text: [],
-      lon: [],
-      lat: [],
-    },
   ];
 
   var layout = {
@@ -214,7 +208,9 @@ function initMap(center = { lon: 121, lat: 23.7 }) {
 
 onMounted(() => {
   response2Resize()
-  initMap({ lon: calculateCenter(), lat: 23.7 });
+  initMap();
+  // initMap({ lon: 120, lat: 23.7 });
+  // initMap({ lon: calculateCenter(), lat: 23.7 });
 });
 
 
