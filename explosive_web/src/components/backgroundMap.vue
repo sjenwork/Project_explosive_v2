@@ -54,31 +54,34 @@ watch(
 
         Plotly.addTraces("map", plot);
 
-        if (data.map((i) => i.lat)[0]) {
-          var method = 'relayout';
+        var focus = false
+        if (focus) {
+          if (data.map((i) => i.lat)[0]) {
+            var method = 'relayout';
 
-          if (method === 'animate') {
-            Plotly.animate('map',
-              {
-                layout: {
-                  mapbox: {
-                    zoom: 9,
-                    center: {
-                      lon: data.map((i) => i.lon)[0] - 0.2,
-                      lat: data.map((i) => i.lat)[0]
+            if (method === 'animate') {
+              Plotly.animate('map',
+                {
+                  layout: {
+                    mapbox: {
+                      zoom: 9,
+                      center: {
+                        lon: data.map((i) => i.lon)[0] - 0.2,
+                        lat: data.map((i) => i.lat)[0]
+                      }
                     }
                   }
-                }
-              },
-            )
-          } else if (method === 'relayout') {
-            Plotly.relayout('map', {
+                },
+              )
+            } else if (method === 'relayout') {
+              Plotly.relayout('map', {
 
-              'mapbox.zoom': 9,
-              'mapbox.center.lon': data.map((i) => i.lon)[0] - 0.2,
-              'mapbox.center.lat': data.map((i) => i.lat)[0],
+                'mapbox.zoom': 9,
+                'mapbox.center.lon': data.map((i) => i.lon)[0] - 0.2,
+                'mapbox.center.lat': data.map((i) => i.lat)[0],
+              }
+              )
             }
-            )
           }
 
         }

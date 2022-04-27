@@ -335,18 +335,19 @@ onMounted(() => {
 
     mymap.on('plotly_click', (i) => {
         try {
-            if (toggleOpen.value) {
-                toggleOpen.value = false
-                document.querySelector('.vtl-tbody tr').click()
+            if (selectedQuery.value === '運作行為 與 化學物質') {
+                if (toggleOpen.value) {
+                    toggleOpen.value = false
+                    document.querySelector('.vtl-tbody tr').click()
+                }
+                var clickpoint = i.points[0].text.split(':')[0]
+                console.log(clickpoint)
+                searchInTable.value = clickpoint
+                toggleOpen.value = true
+                setTimeout(() => {
+                    document.querySelector('.vtl-tbody tr').click()
+                }, 500);
             }
-            var clickpoint = i.points[0].text.split(':')[0]
-            console.log(clickpoint)
-            searchInTable.value = clickpoint
-            toggleOpen.value = true
-            setTimeout(() => {
-                document.querySelector('.vtl-tbody tr').click()
-            }, 500);
-
         } catch (e) {
             toggleOpen.value = true
             document.querySelector('.vtl-tbody tr').click()
@@ -433,6 +434,7 @@ const json2arr = async (data) => {
 
         // 取 data 的第一個 Object 的 key 當表頭
         let arrayTitle = Object.keys(data[0]);
+        console.log(arrayTitle)
         arrayData.push(arrayTitle);
 
         // 取出每一個 Object 裡的 value，push 進新的 Array 裡
@@ -552,9 +554,6 @@ if (defineParameter) {
         } else {
             clearPlotlyTrace('fac')
         }
-
-
-
     }
 
     downloadResult = async (i) => {
@@ -571,8 +570,9 @@ if (defineParameter) {
             if (selectedQuery === '運作行為 與 化學物質') {
                 savedata = data[2].proc
             } else {
-                savedata = data[1].proc
+                savedata = data[0].proc
             }
+            console.log(savedata)
             var ws_data = await json2arr(savedata);
             var ws = utils.aoa_to_sheet(ws_data);
             wb.Sheets["Sheet 1"] = ws;
@@ -583,10 +583,10 @@ if (defineParameter) {
                 for (var i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xff; //convert to octet
                 return buf;
             }
-            saveAs(
-                new Blob([s2ab(wbout)], { type: "application/octet-stream" }),
-                "易爆物統計報表.xlsx"
-            );
+            // saveAs(
+            //     new Blob([s2ab(wbout)], { type: "application/octet-stream" }),
+            //     "易爆物與高風險化學物質統計報表.xlsx"
+            // );
 
 
         } else {
@@ -705,14 +705,7 @@ var tableForFacSearch = reactive({
     },
 });
 
-// var tableList = reactive({'運作行為 與 化學物質': tableForChemSearch, '廠商名稱 或 統一編號': tableForFacSearch })
 
-// var table = reactive(tableList[selectedQuery.value])
-
-// console.log(table)
-// console.log(tableList.value[selectedQuery.value])
-// console.log(selectedQuery.value)
-// console.log(tableList.value[selectedQuery.value])
 //  -----------  表格清單  -----------
 //  ---------------------------------
 
@@ -786,7 +779,7 @@ watch(
 
 );
 
-// watch 化學物質搜尋
+// watch 化學物質與廠商搜尋
 watch(
     [selectedQuery, selectedOperation, selectedChem, selectedComFac, selectedTime],
     async (newVal, oldVal) => {

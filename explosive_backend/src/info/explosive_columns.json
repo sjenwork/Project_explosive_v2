@@ -36,14 +36,12 @@
   "used": [
     "DeclareTime",
     "DeptID",
-    "SourceDept",
     "CASNo",
     "ChemicalChnName",
     "ChemicalEngName",
     "ComFacBizName",
     "BusinessAdminNo",
     "ComFacBizAddress",
-    "PlaceType",
     "RegionType",
     "ImportQuantity",
     "ComFacBizTWD97X",
@@ -68,10 +66,6 @@
       ""
     ],
     [
-      "sourcedept",
-      ""
-    ],
-    [
       "chem",
       "casno"
     ],
@@ -93,10 +87,6 @@
     ],
     [
       "ComFacBizAddress",
-      ""
-    ],
-    [
-      "PlaceType",
       ""
     ],
     [

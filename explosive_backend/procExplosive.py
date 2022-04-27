@@ -182,97 +182,114 @@ def getChemMap_Explosive():
 
 
 def groupByFac(data, cols=[('ComFacBizName', ''), ('ComFacBizAddress', ''), ('import_info', 'X'), ('import_info', 'Y')]):
-    data = copy.deepcopy(data)
+    def procColName(cols):
+        return ['-'.join(i) if i[1] != '' else i[0] for i in cols]
+
+    # data = copy.deepcopy(data)
+    data.columns = procColName(data.columns)
+    col_groupby = procColName(cols)
     # data = copy.deepcopy(p.df2)
-    col_merge = ['-'.join(i) if i[1] != '' else i[0] for i in data.columns]
-    col_by = ['-'.join(i) if i[1] != '' else i[0] for i in cols]
-    data.columns = col_merge
-    s = data[col_by].assign(group='', status=0).sort_values(by='ComFacBizName')
-    sn = copy.deepcopy(s)
+    # col_merge = ['-'.join(i) if i[1] != '' else i[0] for i in data.columns]
+    # col_groupby = ['-'.join(i) if i[1] != '' else i[0] for i in cols]
+    # data.columns = col_merge
+    forLoop = data[col_groupby].assign(
+        group='').sort_values(by='ComFacBizName')
+    groupingData = copy.deepcopy(forLoop)
     groupind = 0
-    for i, row in tqdm(s.iterrows(), desc='grouping factory', total=len(s)):
-        # for j, [i, row] in enumerate(s.iterrows()):
-        if sn.loc[i, 'group'] != '':
+    for i, row in tqdm(forLoop.iterrows(), desc='grouping factory', total=len(forLoop)):
+        if groupingData.loc[i, 'group'] != '':
             continue
-        # if np.mod(groupind, 500) == 0:
-            # print(groupind)
-
-        s1 = s.iloc[:, :3]
-        s2 = pd.concat(
-            [row.iloc[:3].to_frame().T] * len(s)).reset_index(drop=True)
-        s2.index = s1.index
-        ind = (s1 == s2).sum(axis=1)
-        ind2 = sn[ind > 0].index
-        sn.loc[ind2, 'group'] = groupind
-        sn.loc[ind2, 'status'] = ind
+        ind0 = groupingData.group == ''
+        data_source = forLoop.iloc[:, :3][ind0]  # 取出比較來源資料
+        data_target = pd.concat(
+            [row.iloc[:3].to_frame().T] * len(data_source)).reset_index(drop=True)  # 生成一個和比較來源一樣大小的df
+        data_target.index = data_source.index
+        ind = (data_source == data_target).sum(axis=1)
+        ind2 = groupingData[ind0][ind > 0].index
+        groupingData.loc[ind2, 'group'] = groupind
         groupind += 1
+    # 處理群組間可能是相關的單位
+    # tmp = groupingData.groupby('ComFacBizName').group.agg(
+    #     lambda i: ','.join(map(str, set(i))))
+    # tmp = tmp[tmp.str.contains(',')]
 
-    grp2name = sn[['group', 'ComFacBizName']].groupby(['group']).agg(
-        lambda i: i.iloc[0])
-    grp2admino = sn[['group', 'BusinessAdminNo']].groupby(['group']).agg(
-        lambda i: i.iloc[0])
-    sn['ComFacBizName_list'] = sn['group'].map(
-        sn.groupby('group').ComFacBizName.agg(
-            lambda i: (','.join(set(i))))
+    groupingData.index.name = 'index'
+    groupingData = groupingData.reset_index()
+    groupingData_grouped = (
+        groupingData
+        .groupby(['group', 'ComFacBizAddress', 'ComFacBizName', 'BusinessAdminNo'])
+        .agg({'index': lambda i: ','.join(map(str, i))})
+        .reset_index()
+        .rename(columns={'index': 'indexList'})
     )
-    sn['BusinessAdminNo_list'] = sn['group'].map(
-        sn.groupby('group').BusinessAdminNo.agg(
-            lambda i: (','.join(map(str, set(i)))))
-    )
-    sn['ComFacBizName'] = sn['group'].map(grp2name.ComFacBizName)
-    sn['BusinessAdminNo'] = sn['group'].map(grp2admino.BusinessAdminNo)
 
-    # data2 = pd.concat([data, sn['group']], axis=1)
-    data2 = pd.concat([
-        data.drop(columns=['ComFacBizName', 'BusinessAdminNo']),
-        sn['ComFacBizName'], sn['BusinessAdminNo'], sn['group'],
-        sn['ComFacBizName_list'], sn['BusinessAdminNo_list']
-    ], axis=1)
-    return data2, sn
+    grp2name = groupingData[['group', 'ComFacBizName']].groupby(['group']).agg(
+        lambda i: i.iloc[0])
+    grp2admino = groupingData[['group', 'BusinessAdminNo']].groupby(['group']).agg(
+        lambda i: i.iloc[0])
+
+    # groupingData['ComFacBizName_list'] = groupingData['group'].map(
+    #     groupingData.groupby('group').ComFacBizName.agg(
+    #         lambda i: (','.join(set(i))))
+    # )
+    # groupingData['BusinessAdminNo_list'] = groupingData['group'].map(
+    #     groupingData.groupby('group').BusinessAdminNo.agg(
+    #         lambda i: (','.join(map(str, set(i)))))
+    # )
+    groupingData['ComFacBizName_rep'] = groupingData['group'].map(
+        grp2name.ComFacBizName)
+    groupingData['BusinessAdminNo_rep'] = groupingData['group'].map(
+        grp2admino.BusinessAdminNo)
+
+    # data2 = pd.concat([data, groupingData['group']], axis=1)
+    data2 = (
+        data.drop(columns=[
+            'ComFacBizName', 'BusinessAdminNo', 'ComFacBizAddress'])
+        .merge(groupingData[['index', 'group', 'ComFacBizName_rep', 'BusinessAdminNo_rep']], left_index=True, right_on='index')
+        .rename(columns={'ComFacBizName_rep': 'ComFacBizName', 'BusinessAdminNo_rep': 'BusinessAdminNo'})
+    )
+    # data2 = pd.concat([
+    #     data.drop(columns=['ComFacBizName', 'BusinessAdminNo']),
+    #     groupingData['ComFacBizName'], groupingData['BusinessAdminNo'], groupingData['group'],
+    # ], axis=1)
+    return data2, groupingData
 
 
 def wide2long(data):
     data2 = {}
     for operation in ['import', 'produce', 'usage', 'storage']:
-        cols1 = ['time', 'deptid', 'casno', 'PlaceType',
-                 'RegionType', 'ComFacBizName', 'BusinessAdminNo', 'group',
-                 'ComFacBizName_list', 'BusinessAdminNo_list'
-                 ]
+        cols1 = [
+            'time', 'deptid', 'casno', 'RegionType',
+            'ComFacBizName', 'BusinessAdminNo', 'group', 'index'
+        ]
         cols2 = [f'{operation}_info-{i}' for i in ['Quantity', 'X', 'Y']]
         cols = cols1 + cols2
         data2[operation] = data[cols]
 
-    # 將運作行為中，同期別、同化學物質、同來源、同廠商、同座標的資料加總
+    # 相同「運作行為(operation)、區域類別(RegionType)、期別(time)、化學物質(casno)、
+    # 來源(deptid)、廠商(ComFacBizName、BusinessAdminNo、group)、座標(X、Y)」的資料加總
     data3 = copy.deepcopy(data2)
     for key in data2.keys():
         colname = f'{key}_info-Quantity'
-        item = data2[key].reset_index()
-
-        item = item.astype({colname: float, 'index': str})
+        item = data2[key].astype({colname: float, 'index': str})
         item = item[item[colname] > 0]
         aggfun = {
             colname: 'sum',
-            'PlaceType': lambda i:  list(set(i))[0],
-            'RegionType': lambda i: list(set(i))[0],
             'index': lambda i: ','.join(i),
-            'count': 'count'
         }
         item_1 = (
             item[item[f'{key}_info-X'] != '-']
             .assign(count=0)
             .groupby([
-                'group', 'ComFacBizName', 'BusinessAdminNo', 'casno', 'time', 'deptid',
-                'ComFacBizName_list', 'BusinessAdminNo_list',
+                'group', 'ComFacBizName', 'BusinessAdminNo', 'casno', 'time', 'deptid', 'RegionType',
                 f'{key}_info-X', f'{key}_info-Y'])
             .agg(aggfun)
         )
-
         item_2 = (
             item[item[f'{key}_info-X'] == '-']
             .set_index([
-                'group', 'ComFacBizName', 'BusinessAdminNo', 'casno', 'time', 'deptid',
-                'ComFacBizName_list', 'BusinessAdminNo_list',
-                f'{key}_info-X', f'{key}_info-Y'])
+                'group', 'ComFacBizName', 'BusinessAdminNo', 'casno', 'time', 'deptid', 'RegionType',
+                f'{key}_info-X', f'{key}_info-Y'], drop=True)
         )
 
         data3[key] = (
@@ -286,6 +303,14 @@ def wide2long(data):
         index={None: 'operation'}).reset_index()
     data4['name'] = data4['casno'].map(getChemMap_Explosive())
     return data4
+
+
+def getLatest(data):
+    data['time_latest'] = (data.groupby(
+        ['operation', 'group',  'casno', 'deptid', 'RegionType', 'lon', 'lat'])
+        .time.transform(max)
+    )
+    return data
 
 
 def locateCounty(data):
@@ -311,7 +336,8 @@ def locateCounty(data):
     data3 = data2.merge(q, left_index=True, right_index=True, how='left')
     data3.city = data3.city.fillna('')
     data4 = pd.DataFrame(data3.drop(columns=['geometry']))
-    return data3
+    data4.time = data4.time.astype(int)
+    return data4
 
 
 def statisticByCity(data):
@@ -324,13 +350,13 @@ def statisticByFac(data):
     # 群組相同，但廠商名稱、統編、座標不同的，會被拆分成多個項目（給繪製地圖用，不同座標可標示在不同座標）
     # 不同來源須分開
     # 另須移除沒有座標的
+
     data2 = data.groupby([
-        "time", "operation", "name", "lon", "lat", "group", "ComFacBizName", "BusinessAdminNo", 'deptid',
-        "ComFacBizName_list", "BusinessAdminNo_list"]
+        "time", "operation", "name", "casno", "lon", "lat", "group", "ComFacBizName", "BusinessAdminNo", 'deptid', 'RegionType'
+    ]
     ).agg({
         'Quantity': 'sum',
-        'RegionType': lambda i: list(set(i))[0],
-        'index': lambda i: ','.join(i)
+        'index': ','.join
     }).reset_index()
     data2 = data2[data2.lon != '']
     return data2
@@ -371,7 +397,13 @@ def handleProcRecord(method, nlen=None):
         return nlen
 
 
-class proc_explosive():
+class proc_explosive_chem():
+    def desc(self):
+        print('''
+        df1: 原始資料（篩選過欄位）
+        df2: 移除casno == ''
+        ''')
+
     def __init__(self, machineName, method='overwrite'):
         self.method = method
         self._getChemMap(machineName)
@@ -391,9 +423,9 @@ class proc_explosive():
             sql += ' where isProc=0'
         df = pd.read_sql(sql, con=connSQL(machineName, name=getFuncName()))
 
-        df = df.drop([
-            'FCOUNTY', 'FTOWN', 'FCOUNTY_TOWN', 'CountyTownship', 'UpdateDate',
-            'IsMerge', 'ProductionZipCode', 'UseageZipCode', 'StorageZipCode'], axis=1)
+        # df = df.drop([
+        #     'FCOUNTY', 'FTOWN', 'FCOUNTY_TOWN', 'CountyTownship', 'UpdateDate',
+        #     'IsMerge', 'ProductionZipCode', 'UseageZipCode', 'StorageZipCode'], axis=1)
 
         pth = pathlib.Path(os.path.abspath('.'))
         with open(pth/'src/info/explosive_columns.json') as f:
@@ -401,6 +433,13 @@ class proc_explosive():
 
         df = df[cols['used']]
         df.columns = pd.MultiIndex.from_tuples(cols['nameMap'])
+        # 將所有運作量為0的移除
+        Quantity_col = [i for i in df.columns if i[1] == 'Quantity']
+        df = df.astype(dict(zip(Quantity_col, [float]*4)))
+        df = df[df[Quantity_col].sum(axis=1) > 0]
+        # 將統編格式統一
+        df.BusinessAdminNo = df.BusinessAdminNo.apply(lambda i: i.zfill(8))
+
         self.df = df
 
     def procChemName(self, chem):
@@ -438,10 +477,10 @@ def saveRecords(data, colname, machineName, method):
     col.insert_many(data)
 
 
-def getFacList(df5):
-    data = copy.deepcopy(df5)[['ComFacBizName', 'BusinessAdminNo', 'group']]
-    data2 = data.drop_duplicates(subset=data.columns)
-    return data2
+def getFacList(data):
+    # data = copy.deepcopy(data)[['ComFacBizName', 'BusinessAdminNo', 'group']]
+    return data.drop(columns=['index', 'ComFacBizName_rep', 'BusinessAdminNo_rep']).drop_duplicates(
+        subset=['ComFacBizName', 'ComFacBizAddress', 'BusinessAdminNo', 'group'])
 
 
 def getTimeList(df5):
@@ -473,11 +512,19 @@ def getTimeList(df5):
     return timeList  # .to_dict(orient='records')
 
 
+def df2record(data):
+    now = datetime.datetime.now()
+    return data.fillna('-').replace('', '-').assign(updatetime=now).to_dict(orient='records')
+
+
+def getChemList(data):
+    return data[['name', 'casno']].drop_duplicates().reset_index(drop=True)
+
+
 if __name__ == '__main__':
     test = False
     save = True
     load = False
-    now = datetime.datetime.now()
 
     save_paras = {
         'method': 'overwrite',
@@ -486,53 +533,65 @@ if __name__ == '__main__':
     method = 'overwrite'
     if not test:
         machineName = 'mssql_chemtest'
-        p = proc_explosive(machineName, method=method)
-        df3, sn = groupByFac(p.df2, cols=[
+        p = proc_explosive_chem(machineName, method=method)
+        df3, groupingData = groupByFac(p.df2, cols=[
             ('ComFacBizName', ''),
             ('ComFacBizAddress', ''),
             ("BusinessAdminNo", ''),
-            ('import_info', 'X'),
-            ('import_info', 'Y'),
-        ])  # 以廠商名稱、地址、座標分組
+        ])  # 以廠商名稱、地址、統一編號
         df4 = wide2long(df3)  # 資料統整
         df5 = locateCounty(df4)  # 座標轉換與定位
-        df5 = pd.DataFrame(df5.drop(columns=['geometry']))
-        df5.time = df5.time.astype(int)
+        df5 = getLatest(df5)  # 取得各公司最新的時間點
         df6 = statisticByCity(df5)
-        df7 = statisticByFac(df5)
-        df8 = statisticByFac_forTable(df5)
-        df9 = getFacList(df5)
+
+        # df7 = statisticByFac(df5)
+        # df8 = statisticByFac_forTable(df5)
+        df9 = getFacList(groupingData)
         df10 = getTimeList(df5)
+        df11 = getChemList(df5)
 
-    if save:
-        paras = {'orient': 'records', 'indent': 2, 'force_ascii': False}
-        df5.fillna('-').to_json('tmp/df5.json', **paras)
-        df6.fillna('-').to_json('tmp/df6.json', **paras)
-        df7.fillna('-').to_json('tmp/df7.json', **paras)
-        df8.fillna('-').to_json('tmp/df8.json', **paras)
-        df9.fillna('-').to_json('tmp/df9.json', **paras)
-        df10.fillna('-').to_json('tmp/df10.json', **paras)
+        saveRecords(df2record(groupingData),
+                    colname='group2ComFacBizMapping', **save_paras)
+        saveRecords(df2record(df5),
+                    colname='ComFacBizHistory_allStatistic', **save_paras)
+        saveRecords(df2record(df6),
+                    colname='ComFacBizHistory_cityStatistic', **save_paras)
+        saveRecords(df2record(df9),
+                    colname='ComFacBizList', **save_paras)
+        saveRecords(df2record(df10),
+                    colname='timeList', **save_paras)
+        saveRecords(df2record(df11),
+                    colname='chemList', **save_paras)
 
-    if load:
-        df5 = pd.read_json('tmp/df5.json')
-        df6 = pd.read_json('tmp/df6.json')
-        df7 = pd.read_json('tmp/df7.json')
-        df8 = pd.read_json('tmp/df8.json')
-        df9 = pd.read_json('tmp/df9.json')
+    # if save:
+    #     paras = {'orient': 'records', 'indent': 2, 'force_ascii': False}
+    #     df5.fillna('-').to_json('tmp/df5.json', **paras)
+    #     df6.fillna('-').to_json('tmp/df6.json', **paras)
+    #     # df7.fillna('-').to_json('tmp/df7.json', **paras)
+    #     # df8.fillna('-').to_json('tmp/df8.json', **paras)
+    #     df9.fillna('-').to_json('tmp/df9.json', **paras)
+    #     df10.fillna('-').to_json('tmp/df10.json', **paras)
+
+    # if load:
+    #     df5 = pd.read_json('tmp/df5.json')
+    #     df6 = pd.read_json('tmp/df6.json')
+    #     df7 = pd.read_json('tmp/df7.json')
+    #     df8 = pd.read_json('tmp/df8.json')
+    #     df9 = pd.read_json('tmp/df9.json')
     # df9 =
 
-    df5_save = df5.fillna('-').assign(updatetime=now).to_dict(orient='records')
-    df6_save = df6.fillna('-').assign(updatetime=now).to_dict(orient='records')
-    df7_save = df7.fillna('-').assign(updatetime=now).to_dict(orient='records')
-    df8_save = df8.fillna('-').assign(updatetime=now).to_dict(orient='records')
-    df9_save = df9.fillna('-').assign(updatetime=now).to_dict(orient='records')
-    df10_save = df10.fillna(
-        '-').assign(updatetime=now).to_dict(orient='records')
-    saveRecords(df5_save, colname='records_all', **save_paras)
-    saveRecords(df6_save, colname='statistic_city', **save_paras)
-    saveRecords(df7_save, colname='statistic_fac', **save_paras)
-    saveRecords(df8_save, colname='statistic_fac_merged', **save_paras)
-    saveRecords(df9_save, colname='records_fac', **save_paras)
-    saveRecords(df10_save, colname='records_time', **save_paras)
+    # df5_save = df5.fillna('-').assign(updatetime=now).to_dict(orient='records')
+    # df6_save = df6.fillna('-').assign(updatetime=now).to_dict(orient='records')
+    # df7_save = df7.fillna('-').assign(updatetime=now).to_dict(orient='records')
+    # df8_save = df8.fillna('-').assign(updatetime=now).to_dict(orient='records')
+    # df9_save = df9.fillna('-').assign(updatetime=now).to_dict(orient='records')
+    # df10_save = df10.fillna(
+    #     '-').assign(updatetime=now).to_dict(orient='records')
+    # saveRecords(df5_save, colname='records_all', **save_paras)
+    # saveRecords(df6_save, colname='statistic_city', **save_paras)
+    # saveRecords(df7_save, colname='statistic_fac', **save_paras)
+    # saveRecords(df8_save, colname='statistic_fac_merged', **save_paras)
+    # saveRecords(df9_save, colname='records_fac', **save_paras)
+    # saveRecords(df10_save, colname='records_time', **save_paras)
 
     # saveRecords(df9_save, colname='statistic_fac', **save_paras)
