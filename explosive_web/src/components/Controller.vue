@@ -77,63 +77,80 @@
                                 style="height:30px"
                             /> -->
                         </div>
-                        <table-lite
-                            :is-static-mode="true"
-                            :is-loading="table.isLoading"
-                            :columns="table.columns"
-                            :rows="table.rows"
-                            :total="table.totalRecordCount"
-                            :sortable="table.sortable"
-                            @is-finished="tableLoadingFinish"
-                            @toggleinfo="handleToggleInfo"
-                            :toggleOpen="toggleOpen"
-                        >
-                            <td
-                                colspan="3"
-                                style="background-color: rgba(200,240,200,.5);overflow-x:scroll; overflow-x: scroll;"
+                        <template v-if="selectedQuery === '運作行為 與 化學物質'">
+                            <table-lite
+                                :is-static-mode="true"
+                                :is-loading="tableForChemSearch.isLoading"
+                                :columns="tableForChemSearch.columns"
+                                :rows="tableForChemSearch.rows"
+                                :total="tableForChemSearch.totalRecordCount"
+                                :sortable="tableForChemSearch.sortable"
+                                @is-finished="tableLoadingFinish"
+                                @toggleinfo="handleToggleInfoFromSearchChem"
+                                :toggleOpen="toggleOpen"
                             >
-                                <div style="margin-top:10px; margin-bottom: 30px;width:240%">
-                                    <table
-                                        class="table table-hover"
-                                        style="table-layout: fixed;width:100%"
-                                    >
-                                        <thead>
-                                            <tr>
-                                                <th>資料來源</th>
-                                                <th>運作行為</th>
-                                                <th>申報期別</th>
-                                                <th>化學物質</th>
-                                                <th>運作量</th>
-                                                <th>廠商名稱</th>
-                                                <th>統一編號</th>
-                                                <th style="width:20%">廠商名稱列表</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <template v-for="comfac in comFacDetail">
+                                <td
+                                    colspan="3"
+                                    style="background-color: rgba(200,240,200,.5);overflow-x:scroll; overflow-x: scroll;"
+                                >
+                                    <div style="margin-top:10px; margin-bottom: 30px;width:240%">
+                                        <table
+                                            class="table table-hover"
+                                            style="table-layout: fixed;width:100%"
+                                        >
+                                            <thead>
                                                 <tr>
-                                                    <td>{{ dept_e2c[comfac.deptid] }}</td>
-                                                    <td>{{
-                                                            operationOptions.filter(i => i.eng === comfac.operation)[0].chn
-                                                    }}</td>
-                                                    <td>{{
-                                                            String(comfac.time)
-                                                                .replace(/01$/, 'Q1').replace(/04$/, 'Q2')
-                                                                .replace(/07$/, 'Q3').replace(/10$/, 'Q4')
-                                                    }}</td>
-                                                    <td>{{ comfac.name }}</td>
-                                                    <td>{{ comfac.Quantity }}</td>
-                                                    <td>{{ comfac.ComFacBizName }}</td>
-                                                    <td>{{ comfac.BusinessAdminNo }}</td>
-                                                    <td>{{ comfac.ComFacBizName_list }}</td>
+                                                    <th>資料來源</th>
+                                                    <th>運作行為</th>
+                                                    <th>申報期別</th>
+                                                    <th>化學物質</th>
+                                                    <th>運作量</th>
+                                                    <th>廠商名稱</th>
+                                                    <th>統一編號</th>
+                                                    <th style="width:20%">廠商名稱列表</th>
                                                 </tr>
-                                            </template>
+                                            </thead>
+                                            <tbody>
+                                                <template v-for="comfac in comFacDetail">
+                                                    <tr>
+                                                        <td>{{ dept_e2c[comfac.deptid] }}</td>
+                                                        <td>{{
+                                                                operationOptions.filter(i => i.eng ===
+                                                                    comfac.operation)[0].chn
+                                                        }}</td>
+                                                        <td>{{
+                                                                String(comfac.time)
+                                                                    .replace(/01$/, 'Q1').replace(/04$/, 'Q2')
+                                                                    .replace(/07$/, 'Q3').replace(/10$/, 'Q4')
+                                                        }}</td>
+                                                        <td>{{ comfac.name }}</td>
+                                                        <td>{{ comfac.Quantity }}</td>
+                                                        <td>{{ comfac.ComFacBizName }}</td>
+                                                        <td>{{ comfac.BusinessAdminNo }}</td>
+                                                        <td>{{ comfac.ComFacBizName_list }}</td>
+                                                    </tr>
+                                                </template>
 
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </td>
-                        </table-lite>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </table-lite>
+                        </template>
+                        <template v-else-if="selectedQuery === '廠商名稱 或 統一編號'">
+                            <table-lite
+                                :is-static-mode="true"
+                                :is-loading="tableForFacSearch.isLoading"
+                                :columns="tableForFacSearch.columns"
+                                :rows="tableForFacSearch.rows"
+                                :total="tableForFacSearch.totalRecordCount"
+                                :sortable="tableForFacSearch.sortable"
+                                @is-finished="tableLoadingFinish"
+                                @toggleinfo="handleToggleInfoFromSearchFac"
+                            >
+                                <!-- :toggleOpen="toggleOpen" -->
+                            </table-lite>
+                        </template>
                     </div>
                     <div
                         class="tab-pane fade"
@@ -312,10 +329,36 @@ import { faArrowCircleDown } from '@fortawesome/free-solid-svg-icons'
 import { utils, write } from "xlsx";
 import { saveAs } from "file-saver";
 
+onMounted(() => {
+    // click point in map
+    let mymap = document.querySelector('#map')
+
+    mymap.on('plotly_click', (i) => {
+        try {
+            if (toggleOpen.value) {
+                toggleOpen.value = false
+                document.querySelector('.vtl-tbody tr').click()
+            }
+            var clickpoint = i.points[0].text.split(':')[0]
+            console.log(clickpoint)
+            searchInTable.value = clickpoint
+            toggleOpen.value = true
+            setTimeout(() => {
+                document.querySelector('.vtl-tbody tr').click()
+            }, 500);
+
+        } catch (e) {
+            toggleOpen.value = true
+            document.querySelector('.vtl-tbody tr').click()
+            searchInTable.value = ''
+        }
+    })
+
+});
 
 
 // emit and props
-const emit = defineEmits(['queryResult', 'focusResult']);
+const emit = defineEmits(['queryFromChemSearch', 'queryFromFacSearch', 'focusResult']);
 const props = defineProps();
 
 // 查詢參數
@@ -348,7 +391,8 @@ var emitData = ref();
 var navbarStatus = document.querySelector('body').clientWidth > 760 ? ref(true) : ref(false)
 
 // toggle table-lite row
-var handleToggleInfo
+var handleToggleInfoFromSearchChem
+var handleToggleInfoFromSearchFac
 var comFacDetail = ref([])
 var toggleOpen = ref(false)
 var searchInTable = ref('')
@@ -417,6 +461,7 @@ if (defineParameter) {
         { method: '廠商名稱 或 統一編號' }
     ]
     selectedQuery.value = "運作行為 與 化學物質"
+    selectedQuery.value = "廠商名稱 或 統一編號"
 
     // 取得運作行為列表
     operationOptions.value = [
@@ -466,6 +511,7 @@ if (defineParameter) {
             clearPlotlyTrace('all')
             tableData.rows = []
             selectedChem.value = ''
+            searchInTable.value = ''
         }
     };
 
@@ -474,9 +520,8 @@ if (defineParameter) {
 
 
     // handle toggle row from table-lite
-    handleToggleInfo = async (info) => {
+    handleToggleInfoFromSearchChem = async (info) => {
         let state = info.state
-        console.log(state)
         if (state) {
             let row = info.row
             let tmp, url
@@ -487,16 +532,29 @@ if (defineParameter) {
                 .sortBy(["name", "operation", "time", "deptid"])
                 .toCollection();
             comFacDetail.value = tmp
-            console.log('here')
             toggleOpen.value = true
             tmp = [...emitData.value.data[1].proc].filter(i => i.group === row.group)
             emit('focusResult', { state: state, row: tmp })
-            console.log(111)
         } else {
             toggleOpen.value = false
             console.log(toggleOpen.value)
             clearPlotlyTrace('fac')
         }
+    }
+
+    handleToggleInfoFromSearchFac = (info) => {
+        let state = info.state
+        if (state) {
+            let row = { ...info.row }
+            console.log(row)
+            // tmp = [...emitData.value.data[1].proc].filter(i => i.group === row.group)
+            emit('focusResult', { state: true, row: [row] })
+        } else {
+            clearPlotlyTrace('fac')
+        }
+
+
+
     }
 
     downloadResult = async (i) => {
@@ -509,7 +567,13 @@ if (defineParameter) {
                 CreatedDate: new Date(),
             };
             wb.SheetNames.push("Sheet 1");
-            var ws_data = await json2arr(data[2].proc);
+            var savedata
+            if (selectedQuery === '運作行為 與 化學物質') {
+                savedata = data[2].proc
+            } else {
+                savedata = data[1].proc
+            }
+            var ws_data = await json2arr(savedata);
             var ws = utils.aoa_to_sheet(ws_data);
             wb.Sheets["Sheet 1"] = ws;
             var wbout = write(wb, { bookType: "xlsx", type: "binary" });
@@ -530,8 +594,9 @@ if (defineParameter) {
         }
     }
 }
-
-var table = reactive({
+//  ---------------------------------
+//  -----------  表格清單  -----------
+var tableForChemSearch = reactive({
     isloading: false,
     columns: [
         {
@@ -573,7 +638,7 @@ var table = reactive({
     }),
 
     totalRecordCount: computed(() => {
-        return table.rows.length;
+        return tableData.rows.length;
     }),
 
     sortable: {
@@ -581,6 +646,75 @@ var table = reactive({
         sort: "asc",
     },
 });
+
+var tableForFacSearch = reactive({
+    isloading: false,
+    columns: [
+        {
+            label: "期別",
+            field: "time",
+            width: "20%",
+            sortable: true,
+            // display: (row) => {
+            //   return `${row.Quantity} 公噸`;
+            // },
+        },
+        {
+            label: "化學物質(資料來源)",
+            field: "name",
+            width: "30%",
+            sortable: true,
+            display: (row) => {
+                return `${row.name}<br>(${row.deptid})`;
+            },
+        },
+        // {
+        //     label: "運作行為",
+        //     field: "operation",
+        //     width: "35%",
+        //     sortable: true,
+        // },
+        {
+            label: "運作量",
+            field: "Quantity",
+            width: "50%",
+            sortable: true,
+            display: (row) => {
+                return `${row.operation} <br> ${row.Quantity.toFixed(2)} 公噸`;
+                // return ` (${row.lon.toFixed(2)}, ${row.lat.toFixed(2)})<br> ${row.operation}<br> ${row.Quantity.toFixed(2)} 公噸`;
+            },
+        },
+
+    ],
+    rows: computed(() => {
+
+        return tableData.rows.filter(
+            x =>
+                x.operation.includes(String(searchInTable.value)) ||
+                x.name.toLowerCase().includes(searchInTable.value.toLowerCase())
+        );
+    }),
+
+    totalRecordCount: computed(() => {
+        return tableData.rows.length;
+    }),
+
+    sortable: {
+        order: "id",
+        sort: "asc",
+    },
+});
+
+// var tableList = reactive({'運作行為 與 化學物質': tableForChemSearch, '廠商名稱 或 統一編號': tableForFacSearch })
+
+// var table = reactive(tableList[selectedQuery.value])
+
+// console.log(table)
+// console.log(tableList.value[selectedQuery.value])
+// console.log(selectedQuery.value)
+// console.log(tableList.value[selectedQuery.value])
+//  -----------  表格清單  -----------
+//  ---------------------------------
 
 //  ---------------------------------
 //  ---------- 以下為 Watch ----------
@@ -599,6 +733,8 @@ watch([selectedChem], ([newVal], [oldVal]) => {
         tableData.rows = []
         toggleOpen.value = false
     }
+    console.log(searchInTable.value)
+    searchInTable.value = ''
     console.log(toggleOpen.value)
 });
 
@@ -617,6 +753,7 @@ watch([selectedOperation], ([newVal], [oldVal]) => {
         tableData.rows = []
         toggleOpen.value = false
     }
+    searchInTable.value = ''
 });
 
 // 監控時間選項model狀態
@@ -631,6 +768,7 @@ watch(selectedTime,
             // tableData.rows = []
             toggleOpen.value = false
         }
+        searchInTable.value = ''
     })
 
 // watch 表格搜尋選項
@@ -656,8 +794,18 @@ watch(
         var [oldQuery, oldOperation, oldChem, oldComFac, oldTime] = oldVal
         let newTimeObject = []
         // console.log(newChem)
-        if (newQuery === '運作行為 與 化學物質') {
 
+        // 將時間index轉為時間
+        for (let i = 0; i < newTime.length; i++) {
+            for (let j = 0; j < timeOptions.value.length; j++) {
+                if (timeOptions.value[j].index === newTime[i]) {
+                    newTimeObject.push({ ...timeOptions.value[j] })
+                }
+            }
+        }
+        var [t0, t1] = newTimeObject.map(i => i.time)
+
+        if (newQuery === '運作行為 與 化學物質') {
             if (
                 (
                     (newChem && oldChem && (newChem.chnname !== oldChem.chnname)) ||
@@ -668,15 +816,7 @@ watch(
                     (!oldChem && newChem) || (!oldOperation && newOperation)
                 )
             ) {
-                // 將時間index轉為時間
-                for (let i = 0; i < newTime.length; i++) {
-                    for (let j = 0; j < timeOptions.value.length; j++) {
-                        if (timeOptions.value[j].index === newTime[i]) {
-                            newTimeObject.push({ ...timeOptions.value[j] })
-                        }
-                    }
-                }
-                let [t0, t1] = newTimeObject.map(i => i.time)
+
                 let chnChemName = newChem.chnname
                 let operation = newOperation.eng
 
@@ -705,7 +845,7 @@ watch(
                 ];
                 for (let ind of data.keys()) {
                     var fullUrl = `${data[ind]['url']}${data[ind]['para']}`
-                    data[ind].fullurl = fullUrl;
+                    data[ind].fullUrl = fullUrl;
                     data[ind].data = await fetch(fullUrl).then(res => res.json())
 
                 }
@@ -713,10 +853,13 @@ watch(
                 let data_city = data[0].data
                 let data_fac = data[1].data//.filter(i => i.lon != '')
                 let data_fac_merged = data[2].data//.filter(i => i.lon != '')
+                console.log(data_fac)
+                console.log(data_fac_merged)
+                console.log(data[1].fullUrl)
                 if (t0 !== '最新申報') {
-                    console.log('      >> 查詢結果包含不同季度，需做額外統計：')
+                    console.log('      >> 非查詢「最新申報」，結果包含不同季度，需做額外統計：')
                     if (operation === 'storage') {
-                        console.log('        >> 非查詢「最新申報」，選擇「最大貯存量」')
+                        console.log('        >> 查詢貯存量，選擇「最大貯存量」')
 
                         data_city = new DataFrame(data_city)
                             .sortBy(["Quantity", "time", "operation", "name", "city"], true)
@@ -734,7 +877,7 @@ watch(
                             .toCollection();
 
                     } else {
-                        console.log('        >> 非查詢「最新申報」，計算「總運作量」')
+                        console.log('        >> 非查詢貯存量，計算「總運作量」')
 
                         data_city = new DataFrame(data_city)
                             .groupBy("operation", "name", "city")
@@ -759,12 +902,12 @@ watch(
                     }
                 } else {
                     console.log('      >> 查詢結果為最新季度，可直接使用：')
-                    console.log('        >> 查詢「最新申報」')
                 }
+
 
                 data[0].proc = data_city
                 data[1].proc = data_fac
-                data[2].proc = data_fac_merged
+                data[2].proc = data_fac_merged//.map(i => i.operation = operationOptions.value.filter(j => j.eng === i.operation))
 
                 console.log(`        >> 行政區統計：共${data[0].data.length}筆`)
                 console.log(`        >> 廠商統計：共${data[1].data.length}筆`)
@@ -772,7 +915,7 @@ watch(
                 console.log(`        >> 廠商統計：去重複後：共${data[1].proc.length}筆`)
                 // console.log(data)
                 emitData.value = { time: newTimeObject, chem: newChem, operation: newOperation, data: data }
-                emit('queryResult', emitData)
+                emit('queryFromChemSearch', emitData)
                 tableData.rows = data_fac_merged
                 console.log(toggleOpen.value)
             }
@@ -788,6 +931,102 @@ watch(
             ) {
                 console.log(" >> 廠商查詢 ")
                 console.log(`    >> 搜尋${newComFac}、${newTime}`)
+                console.log(newComFac)
+                data = [
+                    {
+                        dataType: 'faccon',
+                        url: `${baseurl}/statistic_fac`,
+                        para: `?time_ge=${t0}&time_le=${t1}&groupid=${newComFac.group}`
+                        // para: `?time_ge=${t0}&time_le=${t1}&ComFacBizName=${newComFac}`
+                    },
+                    {
+                        dataType: 'faccon',
+                        url: `${baseurl}/statistic_fac_merged`,
+                        para: `?time_ge=${t0}&time_le=${t1}&groupid=${newComFac.group}`
+                        // para: `?time_ge=${t0}&time_le=${t1}&ComFacBizName=${newComFac}`
+                    },
+                ];
+                for (let ind of data.keys()) {
+                    var fullUrl = `${data[ind]['url']}${data[ind]['para']}`
+                    data[ind].fullUrl = fullUrl;
+                    data[ind].data = await fetch(fullUrl).then(res => res.json())
+
+                }
+                // console.log(data)
+                var data_fac = data[0].data
+                var data_fac_merged = data[1].data
+
+                if (t0 !== '最新申報') {
+                    console.log('      >> 非查詢「最新申報」，結果包含不同季度，需做額外統計：')
+                    console.log(data_fac)
+                    console.log(data_fac_merged)
+
+                    let storage
+                    let other
+
+                    // 處理「未把座標不同但group相同的合併的」
+                    storage = data_fac.filter(i => i.operation === 'storage')
+                    other = data_fac.filter(i => i.operation !== 'storage')
+
+                    // console.log(storage)
+                    storage = new DataFrame(storage)
+                        .sortBy(["Quantity", "time", "operation", "name",], true)
+                        .dropDuplicates("operation", "name", "lon")
+                        .toCollection();
+                    // console.log(storage)
+
+                    // console.log(other)
+                    other = new DataFrame(other)
+                        .groupBy("operation", "name", "group", "deptid", "lon", "lat", "ComFacBizName", "BusinessAdminNo", "RegionType")
+                        .aggregate((group) => group.stat.sum("Quantity"))
+                        .rename("aggregation", "Quantity")
+                        .map(row => row.set("time", `${t0}-${t1}`))
+                        .toCollection();
+                    // console.log(other)
+                    data_fac = [...storage, ...other]
+
+
+                    // 處理「已把座標不同但group相同的合併的」
+                    storage = data_fac_merged.filter(i => i.operation === 'storage')
+                    other = data_fac_merged.filter(i => i.operation !== 'storage')
+
+                    // console.log(storage)
+                    storage = new DataFrame(storage)
+                        .sortBy(["Quantity", "time", "operation", "name",], true)
+                        .dropDuplicates("operation", "name", "lon")
+                        .toCollection();
+                    // console.log(storage)
+
+                    // console.log(other)
+                    other = new DataFrame(other)
+                        .groupBy("operation", "name", "group", "deptid", "lon", "lat", "ComFacBizName", "BusinessAdminNo")
+                        .aggregate((group) => group.stat.sum("Quantity"))
+                        .rename("aggregation", "Quantity")
+                        .map(row => row.set("time", `${t0}-${t1}`))
+                        .toCollection();
+                    // console.log(other)
+                    console.log(data_fac_merged)
+                    data_fac_merged = [...storage, ...other]
+                    console.log(data_fac_merged)
+
+                } else {
+                    console.log('      >> 查詢結果為最新季度，可直接使用：')
+                }
+                data_fac_merged.map(i => i.operation = operationOptions.value.filter(j => j.eng === i.operation)[0]['chn'])
+                data_fac_merged.map(i => i.deptid = dept_e2c.value[i.deptid])
+                data_fac.map(i => i.operation = operationOptions.value.filter(j => j.eng === i.operation)[0]['chn'])
+                data_fac.map(i => i.deptid = dept_e2c.value[i.deptid])
+
+                data[0].proc = data_fac
+                // console.log(data_fac_merged)
+                data[1].proc = data_fac_merged
+                // console.log(data[1].proc)
+                console.log(data)
+                // console.log(data_fac_merged)
+                // console.log(data[1].proc)
+                tableData.rows = data_fac
+                emitData.value = { time: newTimeObject, comFac: newComFac, data: data }
+                emit('queryFromFacSearch', emitData)
             }
 
         }

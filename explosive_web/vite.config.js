@@ -8,10 +8,10 @@ export default defineConfig({
   plugins: [vue()],
   // server: {
   //   proxy: {
-  //     '/explosiveapi': {
-  //       target: 'http://172.18.18.2:8000/explosiveapi',
+  //     '/map': {
+  //       target: 'https://wmts.nlsc.gov.tw',
   //       changeOrigin: true,
-  //       rewrite: (path) => path.replace(/^\/explosiveapi/, '/explosiveapi')
+  //       rewrite: (path) => path.replace(/^\/map/, '')
   //     }
 
   //   }

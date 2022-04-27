@@ -252,8 +252,8 @@ def wide2long(data):
         item = item[item[colname] > 0]
         aggfun = {
             colname: 'sum',
-            'PlaceType': lambda i: ','.join(i),
-            'RegionType': lambda i: ','.join(i),
+            'PlaceType': lambda i:  list(set(i))[0],
+            'RegionType': lambda i: list(set(i))[0],
             'index': lambda i: ','.join(i),
             'count': 'count'
         }
@@ -327,7 +327,11 @@ def statisticByFac(data):
     data2 = data.groupby([
         "time", "operation", "name", "lon", "lat", "group", "ComFacBizName", "BusinessAdminNo", 'deptid',
         "ComFacBizName_list", "BusinessAdminNo_list"]
-    ).agg({'Quantity': 'sum'}).reset_index()
+    ).agg({
+        'Quantity': 'sum',
+        'RegionType': lambda i: list(set(i))[0],
+        'index': lambda i: ','.join(i)
+    }).reset_index()
     data2 = data2[data2.lon != '']
     return data2
 
@@ -345,6 +349,7 @@ def statisticByFac_forTable(data):
         'BusinessAdminNo_list': lambda i: ','.join(set(i)),
         'lon': lambda i: ','.join(map(str, set(i))),
         'lat': lambda i: ','.join(map(str, set(i))),
+        'index': lambda i: ','.join(i)
     }).reset_index()
     return data2
 

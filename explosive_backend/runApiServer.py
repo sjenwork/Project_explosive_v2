@@ -98,12 +98,8 @@ async def explosive(
         if len(data) > 0:
             if (time_le == '最新申報') | (time_le == 'latest'):
                 data = data
-                print(2)
             if (time_ge == '最新申報') | (time_ge == 'latest'):
-                print(1)
                 tmp = pd.DataFrame.from_dict(data)
-                print(tmp.iloc[:, :-1])
-                print(tmp.head(1).T)
                 if kind == 'statistic_city':
                     res = (
                         tmp[
@@ -111,13 +107,22 @@ async def explosive(
                                 ['operation', 'name', 'casno', 'city']
                             ).time.transform(max) == tmp.time]
                     )
+                    print(1)
                 elif (kind == 'statistic_fac') | (kind == 'statistic_fac_merged'):
+                    print(len(tmp), '----1')
+                    print(tmp.groupby(
+                        ['operation', 'name', 'ComFacBizName']
+                    ).time.transform(max))
                     res = (
                         tmp[
                             tmp.groupby(
                                 ['operation', 'name', 'ComFacBizName']
                             ).time.transform(max) == tmp.time]
                     )
+                    print(len(res), '----2')
+                    print(2)
+                else:
+                    print(3)
                 data = res.to_dict(orient='records')
         res = data
 

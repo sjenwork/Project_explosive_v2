@@ -3,20 +3,26 @@ import Plotly from "plotly.js-dist-min";
 const range = n => Array.from(Array(n).keys())
 
 const clearPlotlyTrace = (which = 'all') => {
-    let traceLen = document.querySelector("#map").data.length;
+    let trace = document.querySelector("#map").data;
+    let traceLen = trace.length
 
     if (which === 'all') {
         Plotly.deleteTraces("map", range(traceLen).splice(1,))
-        Plotly.relayout("map", {
-            'mapbox.center.lon': calculateCenter(),
-            'mapbox.center.lat': 23.7,
-            'mapbox.zoom': 6.8,
-        }
-        )
+
 
     } else if (which === 'fac') {
-        if (traceLen === 4) { Plotly.deleteTraces("map", [-1]) }
+        [...trace].forEach((elem, ind) => {
+            if (elem.name === '使用者查詢') {
+                Plotly.deleteTraces("map", [ind])
+            }
+        })
     }
+    // Plotly.relayout("map", {
+    //     'mapbox.center.lon': calculateCenter(),
+    //     'mapbox.center.lat': 23.7,
+    //     'mapbox.zoom': 6.8,
+    // }
+    // )
 }
 
 const response2Resize = () => {
