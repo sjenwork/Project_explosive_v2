@@ -479,8 +479,10 @@ def saveRecords(data, colname, machineName, method):
 
 def getFacList(data):
     # data = copy.deepcopy(data)[['ComFacBizName', 'BusinessAdminNo', 'group']]
-    return data.drop(columns=['index', 'ComFacBizName_rep', 'BusinessAdminNo_rep']).drop_duplicates(
-        subset=['ComFacBizName', 'ComFacBizAddress', 'BusinessAdminNo', 'group'])
+    data = data.drop(columns=['index', 'ComFacBizName_rep', 'BusinessAdminNo_rep']).drop_duplicates(
+        subset=['ComFacBizName', 'BusinessAdminNo', 'group'])
+    data['label'] = data['BusinessAdminNo'] + ' ' + data['ComFacBizName']
+    return data
 
 
 def getTimeList(df5):
@@ -518,7 +520,10 @@ def df2record(data):
 
 
 def getChemList(data):
-    return data[['name', 'casno']].drop_duplicates().reset_index(drop=True)
+    data = data[['name', 'casno']].drop_duplicates().reset_index(drop=True)
+    data['label'] = data['name'] + ' ' + data['casno']
+    data = data.rename(columns={'name': 'chnname'})
+    return data
 
 
 if __name__ == '__main__':

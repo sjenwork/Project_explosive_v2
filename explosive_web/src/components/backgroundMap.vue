@@ -32,7 +32,7 @@ watch(
 
       if (newfocusdata.state) {
         var data = newfocusdata.row
-        console.log(data)
+        // console.log(data)
         var plot = [
           {
             lon: data.map((i) => i.lon),
@@ -102,8 +102,8 @@ watch(
       var operation = newPlotVal.operation
       var [data_city, data_fac] = newPlotVal.data
 
-      var data_city_plot = data_city.proc
-      var data_fac_plot = data_fac.proc
+      var data_city_plot = data_city.data
+      var data_fac_plot = data_fac.data
 
       var hovertemplate = "%{location}<br>TIMEINFO%{z:.2f}公噸";
       if (operation.chn === "貯存") {

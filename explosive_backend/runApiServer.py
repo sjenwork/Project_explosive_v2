@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 import json
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ from src.mongo_tools import get_conn as connMongo
 import socket
 import numpy as np
 from src.tools import createRandomChn
+import copy
 
 pd.set_option('display.unicode.east_asian_width', True)
 pd.set_option('display.unicode.ambiguous_as_wide', True)
@@ -39,12 +41,137 @@ class Item(BaseModel):
     city: str | None = None
 
 
-@app.get("/")
+@app.get("/abc")
 def test():
     return 'hello world'
 
 
-@app.get("/explosiveapi/{kind}")
+@app.get("/explosiveapi_ver2/{colName}")
+async def explosive_ver2(
+        colName: str,
+        method: str = 'all',
+        city: str = None,
+        ComFacBizName: str = None,
+        BusinessAdminNo: str = None,
+        name: str = None,
+        casno: str = None,
+        label: str = None,
+        operation: str = None,
+        time: int = None,
+        time_ge: int | str = None,
+        time_le: int | str = None,
+        group: int = None,
+):
+    print(f'\n\n >>>>  查詢時間：{datetime.now()}')
+    machineName = 'mongo_chemtest_from_container'
+    result = {}
+    db = connMongo(machineName)
+    if db:
+        query = {}
+        query_time = ''
+
+        col = db[colName]
+        # 廠商
+        if ComFacBizName is not None:
+            query = query | {'ComFacBizName': {'$regex': ComFacBizName}}
+        if BusinessAdminNo is not None:
+            query = query | {'BusinessAdminNo': {'$regex': BusinessAdminNo}}
+        if group is not None:
+            query = query | {'group': group}
+        # 化學物質
+        if casno is not None:
+            query = query | {'casno': casno}
+        if name is not None:
+            query = query | {'name': name}
+        if label is not None:
+            query = query | {'label': {'$regex': label}}
+        # 運作行為
+        if operation is not None:
+            query = query | {'operation': operation}
+        # 縣市
+        if city is not None:
+            query = query | {'city': city}
+        # 時間
+        query_time = {'time': {}}
+        if time is not None:
+            query_time['time'] = time
+
+        if time_ge is not None:
+            if (time_ge != '最新申報') & (time_ge != 'latest'):
+                query_time['time']['$gte'] = time_ge
+            else:
+                query_time = {'$where': "this.time == this.time_latest"}
+        if time_le is not None:
+            if (time_le != '最新申報') & (time_le != 'latest'):
+                query_time['time']['$lte'] = time_le
+            else:
+                query_time = query_time
+
+        query = query | query_time
+        query2 = {}
+        for key, val in query.items():
+            if val != {}:
+                query2[key] = val
+        query = query2
+        print('query=', query)
+
+        drop_field = ['_id', 'updatetime']
+        # if colName == 'ComFacBizHistory_allStatistic':
+        #     drop_field += ['city']
+
+        # data = col.find({'name': '丙酮'})
+        # print(list(data))
+        data = list(col.find(query, dict(
+            zip(drop_field, [False]*len(drop_field)))))
+        # print(list(data))
+        if method == 'statistic':
+            if data:
+                print('method=statistic')
+                data = pd.DataFrame.from_records(data)
+                grpcol = list(data.columns.drop(
+                    ['time', 'Quantity', 'index', 'time_latest', 'city']))
+
+                storage = copy.deepcopy(data.loc[data.operation == 'storage'])
+                storage = (
+                    (storage.sort_values(by='Quantity', ascending=False))
+                    .groupby(grpcol, as_index=False)
+                    .agg({'Quantity': max, 'time': 'first', 'index': lambda i: ','.join(i)})
+                )
+                other = copy.deepcopy(data.loc[data.operation != 'storage'])
+                other = (
+                    other.astype({'time': str})
+                    .groupby(grpcol, as_index=False)
+                    # .agg({'Quantity': sum})
+                    .agg({'Quantity': sum, 'time': lambda i: ','.join(sorted(set(i))), 'index': lambda i: ','.join(i)})
+                )
+                data = pd.concat([storage, other]).to_dict(orient='records')
+
+        elif method == 'city':
+            if data:
+                data = pd.DataFrame.from_records(data)
+                data = data.groupby(['operation', 'city', 'casno',
+                                    'name'], as_index=False).agg({'Quantity': sum})
+
+                if time_le is not None and time_ge is None:
+                    time = f'~{time_le}'
+                elif time_le is None and time_ge is not None:
+                    time = f'{time_ge}'
+                elif time_le is not None and time_ge is not None and time_le == time_ge:
+                    time = f'{time_ge}'
+                else:
+                    time = f'{time_ge} - {time_le}'
+
+                data = data.assign(time=time)
+                data = data.to_dict(orient='records')
+            # data = []
+
+        return list(data)
+    else:
+        result['status'] = 'server error!'
+        return result
+
+
+@ app.get("/explosiveapi/{kind}")
 async def explosive(
         kind: str,
         city: str = None,
