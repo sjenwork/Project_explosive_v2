@@ -356,7 +356,7 @@ onMounted(() => {
                     document.querySelector('.vtl-tbody tr').click()
                 }
                 var clickpoint = i.points[0].text.split(':')[0]
-                console.log(clickpoint)
+                // console.log(clickpoint)
                 searchInTable.value = clickpoint
                 toggleOpen.value = true
                 setTimeout(() => {
@@ -365,7 +365,7 @@ onMounted(() => {
             }
         } catch (e) {
             if (toggleOpen.value) {
-                console.log(1)
+                // console.log(1)
                 toggleOpen.value = false
                 document.querySelector('.vtl-tbody tr').click()
                 searchInTable.value = ''
@@ -420,7 +420,7 @@ var toggleOpen = ref(false)
 var searchInTable = ref('')
 var tableData = reactive({ rows: [] })
 var clickSearchInput
-console.log(tableData.rows.length)
+// console.log(tableData.rows.length)
 
 var handleSelectQuery
 var handleSelectChem
@@ -431,19 +431,22 @@ var downloadResult
 // table
 
 var dept_e2c = ref({
-    'MND': '國防部',
-    'MOEA005': '經濟部礦務局',
-    'MOEA001': '經濟部中部辦公室',
+    'CAA': '交通部民用航空局',
+    'COA001': '農委會防檢局',
     'EPZA': '"科技產業園區(經濟部加工出口區)"',
+    'MND': '國防部',
+    'MOEA001': '經濟部中部辦公室',
+    'MOEA002': '經濟部工業局(自行設置)',
+    'MOEA005': '經濟部礦務局',
+    'MOF001': '財政部關務署',
+    'MOF002': '財政部國庫署',
+    'MOI001': '內政部消防署',
+    'MOL001': '勞動部職安署',
     'MOST001': '科技部竹科管理局',
     'MOST002': '科技部中科管理局',
     'MOST003': '科技部南科管理局',
-    'MOI001': '內政部消防署',
-    'MOL001': '勞動部職安署',
-    'COA001': '農委會防檢局',
-    'TCSB': '環保署化學局',
     'MOTC001': '交通部臺灣港務公司',
-    'MOF001': '財政部關務署'
+    'TCSB': '環保署化學局',
 })
 
 
@@ -456,7 +459,7 @@ const json2arr = async (data) => {
 
         // 取 data 的第一個 Object 的 key 當表頭
         let arrayTitle = Object.keys(data[0]);
-        console.log(arrayTitle)
+        // console.log(arrayTitle)
         arrayData.push(arrayTitle);
 
         // 取出每一個 Object 裡的 value，push 進新的 Array 裡
@@ -486,7 +489,7 @@ if (defineParameter) {
         { method: '廠商名稱 或 統一編號' }
     ]
     selectedQuery.value = "運作行為 與 化學物質"
-    selectedQuery.value = "廠商名稱 或 統一編號"
+    // selectedQuery.value = "廠商名稱 或 統一編號"
 
     // 取得運作行為列表
     operationOptions.value = [
@@ -508,6 +511,9 @@ if (defineParameter) {
         } else {
             res = []
         }
+        let mapping = { 'hazard': '高風險', 'explosive': '易爆物' }
+        res.map(i => i.label = `${mapping[i.database]} ${i.label} ${i.engname}`)
+        // console.log(res)
         chemOptions.value = res;
         isLoadingChem.value = false;
     };
@@ -529,7 +535,7 @@ if (defineParameter) {
 
     // 取得時間列表
     asyncGetTime = async () => {
-        var response = await fetch(`${baseurl}/records_time`)
+        var response = await fetch(`${baseurl}/timeList`)
         var time = await response.json();
         return time
     };
@@ -556,7 +562,7 @@ if (defineParameter) {
 
     // table搜尋相關
     clickSearchInput = (evt) => {
-        console.log(evt)
+        // console.log(evt)
         searchInTable.value = ''
     }
 
@@ -597,7 +603,7 @@ if (defineParameter) {
         let state = info.state
         if (state) {
             let row = { ...info.row }
-            console.log(row)
+            // console.log(row)
             // tmp = [...emitData.value.data[1].proc].filter(i => i.group === row.group)
             emit('focusResult', { state: true, row: [row] })
         } else {
@@ -621,7 +627,7 @@ if (defineParameter) {
             } else {
                 savedata = data[1].data
             }
-            console.log(savedata)
+            // console.log(savedata)
             var ws_data = await json2arr(savedata);
             var ws = utils.aoa_to_sheet(ws_data);
             wb.Sheets["Sheet 1"] = ws;
@@ -722,33 +728,33 @@ var tableForFacSearch = reactive({
         //     width: "35%",
         //     sortable: true,
         // },
-        {
-            label: "化學物質",
-            field: "name",
-            // width: "60%",
-            sortable: true,
-            // display: (row) => {
-            //     return `${row.operation} <br> ${row.Quantity.toFixed(2)} 公噸`;
-            //     // return ` (${row.lon.toFixed(2)}, ${row.lat.toFixed(2)})<br> ${row.operation}<br> ${row.Quantity.toFixed(2)} 公噸`;
-            // },
-        },
+
         {
             label: "運作資訊",
             field: "ComFacBizName",
-            // width: "60%",
+            width: "60%",
             sortable: true,
             display: (row) => {
                 return (
                     `
-                    <h5>${row.ComFacBizName}</h5>
+                    <h5>${row.cname}</h5>
                     <div>期別：${row.time}</div>
                     <div>資料來源：${dept_e2c.value[row.deptid]}</div>
-                    <div>(統編：${row.BusinessAdminNo})</div>
                     <div>(座標：[${row.lon !== '-' ? row.lon.toFixed(2) : ''}, ${row.lat !== '-' ? row.lat.toFixed(2) : ''}])</div>
                     `
                 );
             },
         },
+        {
+            label: "運作量",
+            field: "Quantity",
+            width: "40%",
+            sortable: true,
+            display: (row) => {
+                return `${operationOptions.value.filter(i => i.eng == row.operation)[0]['chn']} <br> ${row.Quantity.toFixed(2)} 公噸`;
+                // return ` (${row.lon.toFixed(2)}, ${row.lat.toFixed(2)})<br> ${row.operation}<br> ${row.Quantity.toFixed(2)} 公噸`;
+            },
+        }
 
 
     ],
@@ -797,7 +803,7 @@ watch([selectedChem], ([newVal], [oldVal]) => {
 
 // 監控運作行為選項model狀態
 watch([selectedOperation], ([newVal], [oldVal]) => {
-    console.log(newVal, oldVal)
+    // console.log(newVal, oldVal)
     if (newVal && oldVal) {
         if (newVal.chnname !== oldVal.chnname) {
             clearPlotlyTrace('all')
@@ -872,32 +878,27 @@ watch(
                     (!oldChem && newChem) || (!oldOperation && newOperation)
                 )
             ) {
-
+                // console.log(newChem)
+                let chemCasno = newChem.casno
                 let chnChemName = newChem.chnname
                 let operation = newOperation.eng
 
                 // descripition 
-                console.log(" >> 化學物查詢 ")
-                console.log(`    >> 搜尋 --> ${newTimeObject[0].time}~${newTimeObject[1].time}： ${chnChemName} --> ${operation}`)
+                // console.log(" >> 化學物查詢 ")
+                // console.log(`    >> 搜尋 --> ${newTimeObject[0].time}~${newTimeObject[1].time}： ${chnChemName} --> ${operation}`)
 
                 // fetch data
                 data = [
                     {
                         dataType: 'city',
                         url: `${baseurl_ver2}/ComFacBizHistory_allStatistic`,
-                        para: `?name=${chnChemName}&operation=${operation}&time_ge=${t0}&time_le=${t1}&method=city`
+                        para: `?casno=${chemCasno}&operation=${operation}&time_ge=${t0}&time_le=${t1}&method=city`
                     },
                     {
                         dataType: 'faccon',
                         url: `${baseurl_ver2}/ComFacBizHistory_allStatistic`,
-                        para: `?name=${chnChemName}&operation=${operation}&time_ge=${t0}&time_le=${t1}&method=statistic`
+                        para: `?casno=${chemCasno}&operation=${operation}&time_ge=${t0}&time_le=${t1}&method=statistic`
                     },
-                    // {
-                    //     dataType: 'faccon_merged',
-                    //     url: `${baseurl}/statistic_fac_merged`,
-                    //     para: `?name=${chnChemName}&operation=${operation}&time_ge=${t0}&time_le=${t1}`
-                    // },
-
                 ];
                 for (let ind of data.keys()) {
                     var fullUrl = `${data[ind]['url']}${data[ind]['para']}`
@@ -906,7 +907,9 @@ watch(
                     data[ind].data = await fetch(fullUrl).then(res => res.json())
 
                 }
+
                 // 
+                // console.log(data)
                 let data_city = data[0].data
                 let data_fac = data[1].data
                 emitData.value = { time: newTimeObject, chem: newChem, operation: newOperation, data: data }
@@ -922,85 +925,33 @@ watch(
                     newTime !== oldTime
                 )
             ) {
-                console.log(" >> 廠商查詢 ")
-                console.log(`    >> 搜尋${newComFac}、${newTime}`)
-                console.log(newComFac)
+                // console.log(" >> 廠商查詢 ")
+                // console.log(`    >> 搜尋${newComFac}、${newTime}`)
+                // console.log(newComFac)
                 data = [
                     {
                         dataType: 'faccon',
                         url: `${baseurl_ver2}/ComFacBizHistory_allStatistic`,
-                        para: `?time_ge=${t0}&time_le=${t1}&group=${newComFac.group}`
+                        para: `?time_ge=${t0}&time_le=${t1}&group=${newComFac.group}&method=statistic`
                         // para: `?time_ge=${t0}&time_le=${t1}&ComFacBizName=${newComFac}`
                     },
 
                 ];
                 for (let ind of data.keys()) {
                     var fullUrl = `${data[ind]['url']}${data[ind]['para']}`
-                    console.log(fullUrl)
+                    // console.log(fullUrl)
                     data[ind].fullUrl = fullUrl;
                     data[ind].data = await fetch(fullUrl).then(res => res.json())
                 }
-                console.log(data)
+                // console.log(data)
                 // console.log(data)
                 var data_fac = data[0].data
+                console.log(data_fac)
+                tableData.rows = data_fac
+                emitData.value = { time: newTimeObject, comFac: newComFac, data: data }
+                emit('queryFromFacSearch', emitData)
                 // var data_fac_merged = data[1].data
 
-                // if (t0 !== '最新申報') {
-                //     console.log('      >> 非查詢「最新申報」，結果包含不同季度，需做額外統計：')
-                //     console.log(data_fac)
-                //     console.log(data_fac_merged)
-
-                //     let storage
-                //     let other
-
-                //     // 處理「未把座標不同但group相同的合併的」
-                //     storage = data_fac.filter(i => i.operation === 'storage')
-                //     other = data_fac.filter(i => i.operation !== 'storage')
-
-                //     // console.log(storage)
-                //     storage = new DataFrame(storage)
-                //         .sortBy(["Quantity", "time", "operation", "name",], true)
-                //         .dropDuplicates("operation", "name", "lon")
-                //         .toCollection();
-                //     // console.log(storage)
-
-                //     // console.log(other)
-                //     other = new DataFrame(other)
-                //         .groupBy("operation", "name", "group", "deptid", "lon", "lat", "ComFacBizName", "BusinessAdminNo", "RegionType")
-                //         .aggregate((group) => group.stat.sum("Quantity"))
-                //         .rename("aggregation", "Quantity")
-                //         .map(row => row.set("time", `${t0}-${t1}`))
-                //         .toCollection();
-                //     // console.log(other)
-                //     data_fac = [...storage, ...other]
-
-
-                //     // 處理「已把座標不同但group相同的合併的」
-                //     storage = data_fac_merged.filter(i => i.operation === 'storage')
-                //     other = data_fac_merged.filter(i => i.operation !== 'storage')
-
-                //     // console.log(storage)
-                //     storage = new DataFrame(storage)
-                //         .sortBy(["Quantity", "time", "operation", "name",], true)
-                //         .dropDuplicates("operation", "name", "lon")
-                //         .toCollection();
-                //     // console.log(storage)
-
-                //     // console.log(other)
-                //     other = new DataFrame(other)
-                //         .groupBy("operation", "name", "group", "deptid", "lon", "lat", "ComFacBizName", "BusinessAdminNo")
-                //         .aggregate((group) => group.stat.sum("Quantity"))
-                //         .rename("aggregation", "Quantity")
-                //         .map(row => row.set("time", `${t0}-${t1}`))
-                //         .toCollection();
-                //     // console.log(other)
-                //     console.log(data_fac_merged)
-                //     data_fac_merged = [...storage, ...other]
-                //     console.log(data_fac_merged)
-
-                // } else {
-                //     console.log('      >> 查詢結果為最新季度，可直接使用：')
-                // }
 
                 // data_fac_merged.map(i => i.operation = operationOptions.value.filter(j => j.eng === i.operation)[0]['chn'])
                 // data_fac_merged.map(i => i.deptid = dept_e2c.value[i.deptid])
@@ -1108,6 +1059,8 @@ div.card-body {
     width: auto;
     line-height: 41px;
     background-color: none;
+    max-height: 41px;
+    overflow: hidden;
 }
 
 ::v-deep(.multiselect__tags) {

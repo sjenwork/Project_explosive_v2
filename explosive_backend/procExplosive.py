@@ -212,7 +212,7 @@ def groupByFac(data, cols=[('ComFacBizName', ''), ('ComFacBizAddress', ''), ('im
     # tmp = groupingData.groupby('ComFacBizName').group.agg(
     #     lambda i: ','.join(map(str, set(i))))
     # tmp = tmp[tmp.str.contains(',')]
-
+    groupingData.group = groupingData.group.apply(lambda i: f'h{i}')
     groupingData.index.name = 'index'
     groupingData = groupingData.reset_index()
     groupingData_grouped = (
@@ -473,7 +473,7 @@ def saveRecords(data, colname, machineName, method):
     db = connMongo(machineName)
     col = db[colname]
     if method == 'overwrite':
-        col.delete_many({})
+        col.delete_many({'databaseName': 'explosive'})
     col.insert_many(data)
 
 
@@ -516,7 +516,14 @@ def getTimeList(df5):
 
 def df2record(data):
     now = datetime.datetime.now()
-    return data.fillna('-').replace('', '-').assign(updatetime=now).to_dict(orient='records')
+    return (
+        data
+        .fillna('-')
+        .replace('', '-')
+        .assign(updatetime=now)
+        .assign(databaseName='explosive')
+        .to_dict(orient='records')
+    )
 
 
 def getChemList(data):
@@ -559,8 +566,8 @@ if __name__ == '__main__':
                     colname='group2ComFacBizMapping', **save_paras)
         saveRecords(df2record(df5),
                     colname='ComFacBizHistory_allStatistic', **save_paras)
-        saveRecords(df2record(df6),
-                    colname='ComFacBizHistory_cityStatistic', **save_paras)
+        # saveRecords(df2record(df6),
+        #             colname='ComFacBizHistory_cityStatistic', **save_paras)
         saveRecords(df2record(df9),
                     colname='ComFacBizList', **save_paras)
         saveRecords(df2record(df10),
@@ -568,35 +575,11 @@ if __name__ == '__main__':
         saveRecords(df2record(df11),
                     colname='chemList', **save_paras)
 
-    # if save:
-    #     paras = {'orient': 'records', 'indent': 2, 'force_ascii': False}
-    #     df5.fillna('-').to_json('tmp/df5.json', **paras)
-    #     df6.fillna('-').to_json('tmp/df6.json', **paras)
-    #     # df7.fillna('-').to_json('tmp/df7.json', **paras)
-    #     # df8.fillna('-').to_json('tmp/df8.json', **paras)
-    #     df9.fillna('-').to_json('tmp/df9.json', **paras)
-    #     df10.fillna('-').to_json('tmp/df10.json', **paras)
+        # test
+        if False:
+            df_test = copy.deepcopy(df11)
+            saveRecords(df2record(df_test),
+                        colname='chem_test', **save_paras)
 
-    # if load:
-    #     df5 = pd.read_json('tmp/df5.json')
-    #     df6 = pd.read_json('tmp/df6.json')
-    #     df7 = pd.read_json('tmp/df7.json')
-    #     df8 = pd.read_json('tmp/df8.json')
-    #     df9 = pd.read_json('tmp/df9.json')
-    # df9 =
-
-    # df5_save = df5.fillna('-').assign(updatetime=now).to_dict(orient='records')
-    # df6_save = df6.fillna('-').assign(updatetime=now).to_dict(orient='records')
-    # df7_save = df7.fillna('-').assign(updatetime=now).to_dict(orient='records')
-    # df8_save = df8.fillna('-').assign(updatetime=now).to_dict(orient='records')
-    # df9_save = df9.fillna('-').assign(updatetime=now).to_dict(orient='records')
-    # df10_save = df10.fillna(
-    #     '-').assign(updatetime=now).to_dict(orient='records')
-    # saveRecords(df5_save, colname='records_all', **save_paras)
-    # saveRecords(df6_save, colname='statistic_city', **save_paras)
-    # saveRecords(df7_save, colname='statistic_fac', **save_paras)
-    # saveRecords(df8_save, colname='statistic_fac_merged', **save_paras)
-    # saveRecords(df9_save, colname='records_fac', **save_paras)
-    # saveRecords(df10_save, colname='records_time', **save_paras)
-
-    # saveRecords(df9_save, colname='statistic_fac', **save_paras)
+            db = connMongo('mongo_chemtest_outside_container', 'explosive')
+            db['chem_test'].delete_many({'databaseName': 'explosive'})

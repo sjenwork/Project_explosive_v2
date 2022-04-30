@@ -23,16 +23,16 @@ var plotFromFacSearch = ref()
 var focusdata = ref()
 
 function handleQueryFromChemSearch(data) {
-  console.log(`  >> got queryData from Controller.vue`)
+  // console.log(`  >> got queryData from Controller.vue`)
   plotFromChemSearch.value = data.value
 }
 function handleQueryFromFacSearch(data) {
-  console.log(data.value)
+  // console.log(data.value)
   plotFromFacSearch.value = data.value
 }
 
 function handleFocusResult(data) {
-  console.log(`  >> got focusdata from Controller.vue`)
+  // console.log(`  >> got focusdata from Controller.vue`)
   // console.log(data)
   focusdata.value = data
 }

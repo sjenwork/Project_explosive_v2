@@ -60,7 +60,7 @@ async def explosive_ver2(
         time: int = None,
         time_ge: int | str = None,
         time_le: int | str = None,
-        group: int = None,
+        group: str = None,
 ):
     print(f'\n\n >>>>  查詢時間：{datetime.now()}')
     machineName = 'mongo_chemtest_from_container'
@@ -150,7 +150,7 @@ async def explosive_ver2(
             if data:
                 data = pd.DataFrame.from_records(data)
                 data = data.groupby(['operation', 'city', 'casno',
-                                    'name'], as_index=False).agg({'Quantity': sum})
+                                    'cname'], as_index=False).agg({'Quantity': sum})
 
                 if time_le is not None and time_ge is None:
                     time = f'~{time_le}'

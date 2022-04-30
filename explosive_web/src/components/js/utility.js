@@ -11,7 +11,7 @@ const clearPlotlyTrace = (which = 'all') => {
 
 
     } else if (which === 'fac') {
-        console.log('got click in fac');
+        // console.log('got click in fac');
         [...trace].forEach((elem, ind) => {
             if (elem.name === '使用者查詢') {
                 Plotly.deleteTraces("map", [ind])

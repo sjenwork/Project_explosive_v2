@@ -6,7 +6,7 @@ config = ConfigParser()
 config.read('src/conf.ini')
 
 
-def get_conn(machineName):
+def get_conn(machineName, dbname='explosive'):
     print(machineName)
     server = config[machineName]['mongo_server']
     try:
@@ -14,7 +14,7 @@ def get_conn(machineName):
         client = pymongo.MongoClient(
             f"mongodb://{server}:27017/", serverSelectionTimeoutMS=5)
         client.server_info()
-        db = client["explosive"]
+        db = client[dbname]
         return db
     except Exception as e:
         print('error')
