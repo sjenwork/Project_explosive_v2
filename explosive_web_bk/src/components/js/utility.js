@@ -12,7 +12,6 @@ const clearPlotlyTrace = (which = 'all') => {
 
     } else if (which === 'fac') {
         // console.log('got click in fac');
-        // console.log(trace);
         [...trace].forEach((elem, ind) => {
             if (elem.name === '使用者查詢') {
                 Plotly.deleteTraces("map", [ind])
@@ -37,8 +36,7 @@ const calculateCenter = () => {
     let width = document.querySelector('body').clientWidth
     // 螢幕寬度1200 => lon=120
     // 螢幕寬度400 => lon=121
-    let lon = (1200 - width) / (1200 - 400) * (121 - 119.4) + 119.4;
-    console.log('lon-', lon);
+    let lon = (1200 - width) / (1200 - 400) * (121 - 119.4) + 119.4
     return lon
 }
 export { range, clearPlotlyTrace, calculateCenter, response2Resize }

@@ -70,11 +70,12 @@ app.add_middleware(
 #     # deptid: str | None = None
 #     city: str | None = None
 
-cols = [
+rawCols = [
     'casno',
     'cname',
     'ename',
     'srcdept',
+    'deptid',
     'resname',
     'restel',
     'resphone',
@@ -87,7 +88,7 @@ cols = [
     'addr',
     'placetype',
     'regiontype',
-    'regionNname',
+    'regionname',
     'importX',
     'importY',
     'declaretime',
@@ -101,10 +102,9 @@ cols = [
     'storageQ',
     'storageX',
     'storageY',
-    'checkAdmin',
-    'checktime'
+    'cat'
     # 'DeptID',化學物質中文名
-    # 'DeclareDate',
+    # 'declaretime',
 ]
 
 col_map = {
@@ -138,10 +138,8 @@ col_map = {
     'storageQ': '貯存量',
     'storageX': '貯存地點座標資訊\r\n TWD97_X',
     'storageY': '貯存地點座標資訊\r\n TWD97_Y',
-    'checkAdmin': '查核機關',
-    'checktime': '查核時間',
-    # 'DeptID',
-    # 'DeclareDate',
+    'deptid': '部會名稱'
+    # 'declaretime',
 }
 
 
@@ -394,6 +392,7 @@ class typeModel(str, Enum):
     chemical_list = 'chemical_list'
     company_list = 'company_list'
     time_list = 'time_list'
+    city_count = 'city_count'
 
 
 class operationModel(str, Enum):
@@ -423,28 +422,38 @@ def datalist2(
     # client = MongoClient(f"mongodb://localhost:27017/",
     client = MongoClient(f"mongodb://172.18.18.4:27017/",
                          serverSelectionTimeoutMS=5)
-    db = client['explosive']
+    db = client['explosiveNhazardous']
     col = db[data_source]
 
-    if data_type == 'data_list':
+    if data_type == 'data_list' or data_type == 'city_count':
         query = {}
-        query_time = {'DeclareDate': {}}
+        query_time = {'declaretime': {}}
         constraint = {'_id': 0}
 
         if chemical_name is not None:
+            chemical_name = (
+                chemical_name
+                .replace('(','\(')
+                .replace(')','\)')
+                )            
             query = (query | {'chem_merged': {'$regex': chemical_name}})
 
         if company_name is not None:
+            company_name = (
+                company_name
+                .replace('(','\(')
+                .replace(')','\)')
+                )
             query = (query | {'comname_merged': {'$regex': company_name}})
 
         if not time_latest:
             if time is not None:
-                query_time['DeclareDate'] = time
+                query_time['declaretime'] = time
             if time_ge is not None:
-                query_time['DeclareDate']['$gte'] = time_ge
+                query_time['declaretime']['$gte'] = time_ge
             if time_le is not None:
-                query_time['DeclareDate']['$lte'] = time_le
-            if query_time['DeclareDate'] != {}:
+                query_time['declaretime']['$lte'] = time_le
+            if query_time['declaretime'] != {}:
                 query = query | query_time
         else:
             pass
@@ -483,14 +492,16 @@ def datalist2(
                     'prodX': 0,
                     'prodY': 0,
                     'addr_merged': 0,
+                    'srcdept': 0,
+
                     # 'comname_merged': 0,
                     # 'chem_merged': 0,
-                    'declaretime': 0,
+                    # 'declaretime': 0,
                 }
             )
             data = col.find(query, constraint)
             data = list(data)
-
+            # print(data[0])
             print()
             print2(f'搜尋條件：{query}')
             print2(f'找到共 {len(data)} 筆')
@@ -506,16 +517,18 @@ def datalist2(
             if operation is not None:
                 stat_cols = [
                     'comname', 'addr', 'adminno', 'regno', 'casno',
-                    'cname', 'ename', 'checkAdmin', 'checktime', 'DeclareDate',
+                    'cname', 'ename',  'declaretime',
                     'comname_merged', 'chem_merged',
-                    'regiontype', 'srcdept'
+                    'regiontype', 'deptid', 'cat'
                 ] + [
                     f"{operation}Q",
                     f"{operation}X2",
                     f"{operation}Y2",
+                    f'{operation}City',
                 ]
                 data2 = data2[stat_cols]
                 data2 = data2.fillna('-')
+                # print(data2.iloc[0])
 
                 #  -------------------------------------------------------------------------------------------
                 #  運作化學物質廠商查詢 -> 查詢期別區間
@@ -527,8 +540,8 @@ def datalist2(
                             data2
                             .groupby(
                                 [
-                                    'srcdept', 'comname_merged', 'regiontype', 'cname',
-                                    f"{operation}X2", f"{operation}Y2",
+                                    'cat', 'deptid', 'comname_merged', 'regiontype', 'cname',
+                                    f"{operation}X2", f"{operation}Y2", f"{operation}City",
                                 ],
                                 as_index=False
                             )
@@ -542,10 +555,8 @@ def datalist2(
                                     "cname": lambda i: i.iloc[0],
                                     "ename": lambda i: i.iloc[0],
                                     "casno": lambda i: i.iloc[0],
-                                    "DeclareDate": lambda i: ','.join(set(i)),
-                                    # "DeclareDate": lambda i: f"{time_ge if time_ge else '_'} -> {time_le if time_le else '_'}",
-                                    "checkAdmin": lambda i: ','.join(set(i)),
-                                    "checktime": lambda i: ','.join(set(map(str, i))),
+                                    "declaretime": lambda i: ','.join(set(i)),
+                                    # "declaretime": lambda i: f"{time_ge if time_ge else '_'} -> {time_le if time_le else '_'}",
                                     "chem_merged": lambda i: ','.join(set(i)),
                                 }
                             )
@@ -554,12 +565,14 @@ def datalist2(
                                 f'{operation}X2': 'X',
                                 f'{operation}Y2': 'Y',
                                 f'{operation}Q': 'Q',
+                                f'{operation}City': 'City',
                             })
                         )
                         print2(
-                            f"化學物質查詢廠商 -> {{ chem: {chemical_name}, operation: {operation}, time: {query_time['DeclareDate']} }} 查詢")
+                            f"化學物質查詢廠商 -> {{ chem: {chemical_name}, operation: {operation}, time: {query_time['declaretime']} }} 查詢")
                         print2(f"統計後共 {len(data2)} 筆")
                         print()
+                        print2(data2)
                     #  運作化學物質廠商查詢 -> 查詢期別區間 -> 非貯存（統計加總）end
                     #  ---------------------------------------------------------------------------------------
 
@@ -571,8 +584,8 @@ def datalist2(
                             data2
                             .groupby(
                                 [
-                                    'srcdept', 'comname_merged', 'regiontype', 'cname',
-                                    f"{operation}X2", f"{operation}Y2",
+                                    'cat', 'deptid', 'comname_merged', 'regiontype', 'cname',
+                                    f"{operation}X2", f"{operation}Y2", f"{operation}City",
                                 ]
                             )[f"{operation}Q"]
                             .transform(max)
@@ -582,7 +595,7 @@ def datalist2(
                         data2 = data2[idx]
                         print2('選擇較最大的')
                         print2(
-                            f"化學物質查詢廠商 -> {{ chem: {chemical_name}, operation: {operation}, time: {query_time['DeclareDate']} }} 查詢")
+                            f"化學物質查詢廠商 -> {{ chem: {chemical_name}, operation: {operation}, time: {query_time['declaretime']} }} 查詢")
                         print2(f"統計後共 {len(data2)} 筆")
                         print()
                         # -> 若運作量相同，選擇較新的
@@ -590,28 +603,24 @@ def datalist2(
                             data2
                             .groupby(
                                 [
-                                    'srcdept', 'comname_merged', 'regiontype', 'cname',
-                                    f"{operation}X2", f"{operation}Y2",
+                                    'cat', 'deptid', 'comname_merged', 'regiontype', 'cname',
+                                    f"{operation}X2", f"{operation}Y2", f"{operation}City",
                                 ]
-                            )["DeclareDate"]
+                            )["declaretime"]
                             .transform(max)
                             ==
-                            data2["DeclareDate"]
+                            data2["declaretime"]
                         )
                         data2 = data2[idx]
-                        print2('選擇較較新的')
-                        print2(
-                            f"化學物質查詢廠商 -> {{ chem: {chemical_name}, operation: {operation}, time: {query_time['DeclareDate']} }} 查詢")
-                        print2(f"統計後共 {len(data2)} 筆")
-                        print()
-                        # -> 若還有同期別，則進行加總
+
+                        # -> 同期別加總
 
                         data2 = (
                             data2
                             .groupby(
                                 [
-                                    'srcdept', 'comname_merged', 'regiontype', 'cname',
-                                    f"{operation}X2", f"{operation}Y2",
+                                    'cat', 'deptid', 'comname_merged', 'regiontype', 'cname',
+                                    f"{operation}X2", f"{operation}Y2", f"{operation}City",
                                 ],
                                 as_index=False
                             ).agg(
@@ -624,14 +633,18 @@ def datalist2(
                                     "cname": lambda i: i.iloc[0],
                                     "ename": lambda i: i.iloc[0],
                                     "casno": lambda i: i.iloc[0],
-                                    "DeclareDate": lambda i: ','.join(set(i)),
-                                    "checkAdmin": lambda i: ','.join(set(i)),
-                                    "checktime": lambda i: ','.join(set(map(str, i))),
+                                    "declaretime": lambda i: ','.join(set(i)),
                                     "chem_merged": lambda i: ','.join(set(i)),
                                 }
                             )
 
                         )
+
+                        print2('選擇較新的')
+                        print2(
+                            f"化學物質查詢廠商 -> {{ chem: {chemical_name}, operation: {operation}, time: {query_time['declaretime']} }} 查詢")
+                        print2(f"統計後共 {len(data2)} 筆")
+                        print()
 
                         data2 = (
                             data2
@@ -641,12 +654,14 @@ def datalist2(
                                 f'{operation}X2': 'X',
                                 f'{operation}Y2': 'Y',
                                 f'{operation}Q': 'Q',
+                                f'{operation}City': 'City',
                             })
                         )
                         print2(
-                            f"化學物質查詢廠商 -> {{ chem: {chemical_name}, operation: {operation}, time: {query_time['DeclareDate']} }} 查詢")
+                            f"化學物質查詢廠商 -> {{ chem: {chemical_name}, operation: {operation}, time: {query_time['declaretime']} }} 查詢")
                         print2(f"統計後共 {len(data2)} 筆")
                         print()
+                        # print2(data2[['deptid', 'X', 'Y', 'City', 'operation']])
                     #  運作化學物質廠商查詢 -> 查詢期別區間 -> 貯存（最大值與最大期別） end
                     #  ---------------------------------------------------------------------------------------
                 #  運作化學物質廠商查詢 -> 查詢期別區間 end
@@ -659,21 +674,21 @@ def datalist2(
                         data2
                         .groupby(
                             [
-                                'srcdept', 'comname_merged', 'regiontype', 'cname',
-                                f"{operation}X2", f"{operation}Y2",
+                                'cat', 'deptid', 'comname_merged', 'regiontype', 'cname',
+                                f"{operation}X2", f"{operation}Y2", f"{operation}City",
                             ]
-                        )[f"DeclareDate"]
+                        )[f"declaretime"]
                         .transform(max)
                         ==
-                        data2["DeclareDate"]
+                        data2["declaretime"]
                     )
-                    print(idx.sum())
+
                     data2 = (
                         data2[idx]
                         .groupby(
                             [
-                                'srcdept', 'comname_merged', 'regiontype', 'cname',
-                                f"{operation}X2", f"{operation}Y2",
+                                'cat', 'deptid', 'comname_merged', 'regiontype', 'cname',
+                                f"{operation}X2", f"{operation}Y2", f"{operation}City",
                             ],
                             as_index=False,
                         )
@@ -687,9 +702,7 @@ def datalist2(
                                 "cname": lambda i: i.iloc[0],
                                 "ename": lambda i: i.iloc[0],
                                 "casno": lambda i: i.iloc[0],
-                                "DeclareDate": lambda i: ','.join(set(i)),
-                                "checkAdmin": lambda i: ','.join(set(i)),
-                                "checktime": lambda i: ','.join(set(map(str, i))),
+                                "declaretime": lambda i: ','.join(set(i)),
                                 "chem_merged": lambda i: ','.join(set(i)),
                             }
                         )
@@ -699,6 +712,7 @@ def datalist2(
                             f'{operation}X2': 'X',
                             f'{operation}Y2': 'Y',
                             f'{operation}Q': 'Q',
+                            f'{operation}City': 'City',
                         })
                     )
                     # return {'status': '查詢最新運作量'}
@@ -708,15 +722,14 @@ def datalist2(
                     print()
 
                 data2 = data2[[
-                    'DeclareDate', 'srcdept', 'comname_merged', 'comname', 'regiontype', 'addr', 'adminno', 'regno',
+                    'cat', 'declaretime', 'deptid', 'comname_merged', 'comname', 'regiontype', 'addr', 'adminno', 'regno',
                     'cname', 'ename', 'casno', 'chem_merged',
-                    'operation', 'X', 'Y',  "Q",
-                    'checkAdmin', 'checktime'
+                    'operation', 'X', 'Y',  "Q", "City"
                 ]]
                 data2 = data2.sort_values(by=[
-                    'srcdept',  'Q', 'regiontype', 'comname_merged'
+                    'cat', 'deptid',  'Q', 'regiontype', 'comname_merged'
                 ], ascending=[
-                    True,  False, True, True
+                    True, True,  False, True, True
                 ])
                 #  運作化學物質廠商查詢 -> 最新期別查詢 end
                 #  -------------------------------------------------------------------------------------------
@@ -731,8 +744,8 @@ def datalist2(
                 if not time_latest:
                     # return {'status': '查詢廠商運作量統計'}
                     data2 = data2.set_index([
-                        'DeclareDate', 'srcdept', 'comname_merged', 'comname', 'regiontype', 'addr', 'adminno', 'regno',
-                        'cname', 'ename', 'casno', 'chem_merged', 'checkAdmin', 'checktime'
+                        'cat', 'declaretime', 'deptid', 'comname_merged', 'comname', 'regiontype', 'addr', 'adminno', 'regno',
+                        'cname', 'ename', 'casno', 'chem_merged',
                     ])
                     data3 = []
                     #  ---------------------------------------------------------------------------------------
@@ -743,12 +756,15 @@ def datalist2(
                                 f'{ioperation}X2',
                                 f'{ioperation}Y2',
                                 f'{ioperation}Q',
+                                f'{ioperation}City',
                             ]
                         ].rename(
                             columns={
                                 f'{ioperation}X2': 'X',
                                 f'{ioperation}Y2': 'Y',
-                                f'{ioperation}Q': 'Q'}
+                                f'{ioperation}Q': 'Q',
+                                f'{ioperation}City': 'City'
+                            }
                         ).assign(
                             operation=ioperation,
                         )
@@ -767,7 +783,7 @@ def datalist2(
                         idx = (
                             data2_storage
                             .groupby(
-                                ['srcdept', 'cname', 'comname',
+                                ['cat', 'deptid', 'cname', 'comname',
                                     'regiontype', 'operation']
                             )['Q']
                             .transform(max) == data2_storage.Q
@@ -778,18 +794,19 @@ def datalist2(
                         idx = (
                             data2_storage
                             .groupby(
-                                ['srcdept', 'cname', 'comname',
+                                ['cat', 'deptid', 'cname', 'comname',
                                     'regiontype', 'operation']
-                            )['DeclareDate']
-                            .transform(max) == data2_storage.DeclareDate
+                            )['declaretime']
+                            .transform(max) == data2_storage.declaretime
                         )
                         data2_storage = data2_storage[idx]
+
                         data2_storage = (
                             data2_storage
                             .groupby(
                                 [
-                                    'srcdept',
-                                    'comname_merged', 'regiontype', 'addr', 'X', 'Y',
+                                    'cat', 'deptid',
+                                    'comname_merged', 'regiontype', 'addr', 'X', 'Y', 'City',
                                     'chem_merged', 'operation',
                                 ],
                                 as_index=False
@@ -801,9 +818,7 @@ def datalist2(
                                 "cname": lambda i: i.iloc[0],
                                 "ename": lambda i: i.iloc[0],
                                 "casno": lambda i: i.iloc[0],
-                                "DeclareDate": lambda i: ','.join(set(i)),
-                                "checkAdmin": lambda i: ','.join(set(i)),
-                                "checktime": lambda i: ','.join(set(map(str, i))),
+                                "declaretime": lambda i: ','.join(set(i)),
                             })
                         )
 
@@ -820,8 +835,8 @@ def datalist2(
                             data2_others
                             .groupby(
                                 [
-                                    'srcdept',
-                                    'comname_merged', 'regiontype', 'addr', 'X', 'Y',
+                                    'cat', 'deptid',
+                                    'comname_merged', 'regiontype', 'addr', 'X', 'Y', 'City',
                                     'chem_merged', 'operation',
                                 ],
                                 as_index=False
@@ -833,9 +848,7 @@ def datalist2(
                                 "cname": lambda i: i.iloc[0],
                                 "ename": lambda i: i.iloc[0],
                                 "casno": lambda i: i.iloc[0],
-                                "DeclareDate": lambda i: ','.join(set(i)),
-                                "checkAdmin": lambda i: ','.join(set(i)),
-                                "checktime": lambda i: ','.join(set(map(str, i))),
+                                "declaretime": lambda i: ','.join(set(i)),
                             })
                         )
                     #  ---------------------------------------------------------------------------------------
@@ -845,7 +858,7 @@ def datalist2(
 
                     # print(data2)
                     print2(
-                        f"化學物質查詢廠商 -> {{ chem: {chemical_name}, operation: {operation}, time: {query_time['DeclareDate']} }} 查詢")
+                        f"化學物質查詢廠商 -> {{ chem: {chemical_name}, operation: {operation}, time: {query_time['declaretime']} }} 查詢")
                     print2(f"統計後共 {len(data2)} 筆")
                     print()
                 #  廠商查詢運作化學物質 -> 查詢期別區間 end
@@ -860,27 +873,27 @@ def datalist2(
                         data2
                         .groupby(
                             [
-                                'srcdept', 'regiontype', 'chem_merged', 'addr',
+                                'cat', 'deptid', 'regiontype', 'chem_merged', 'addr',
                             ]
-                        )[f"DeclareDate"]
+                        )[f"declaretime"]
                         .transform(max)
                         ==
-                        data2["DeclareDate"]
+                        data2["declaretime"]
                     )
 
                     data2 = (data2[idx])
 
-                    # ['DeclareDate', 'srcdept', 'comname_merged', 'comname', 'regiontype',
+                    # ['declaretime', 'srcdept', 'deptid', 'comname_merged', 'comname', 'regiontype',
                     # 'addr', 'adminno', 'regno', 'cname', 'ename',
-                    # 'casno', 'chem_merged', 'checkAdmin', 'checktime', 'X',
+                    # 'casno', 'chem_merged',  'X',
                     # 'Y', 'Q', 'operation']
                     # 14 + 3*4 = 26 -> 14 + 3 + 1= 18
 
                     # 將運作量 wide to long
                     data2 = data2.set_index([
-                        'DeclareDate', 'srcdept', 'comname_merged', 'comname', 'regiontype',
+                        'declaretime', 'cat', 'deptid', 'comname_merged', 'comname', 'regiontype',
                         'addr', 'adminno', 'regno', 'cname', 'ename',
-                        'casno', 'chem_merged', 'checkAdmin', 'checktime'
+                        'casno', 'chem_merged',
                     ])
                     data3 = []
                     for ioperation in ['storage', 'usage', 'prod', 'import']:
@@ -889,12 +902,15 @@ def datalist2(
                                 f'{ioperation}X2',
                                 f'{ioperation}Y2',
                                 f'{ioperation}Q',
+                                f'{ioperation}City',
                             ]
                         ].rename(
                             columns={
                                 f'{ioperation}X2': 'X',
                                 f'{ioperation}Y2': 'Y',
-                                f'{ioperation}Q': 'Q'}
+                                f'{ioperation}Q': 'Q',
+                                f'{ioperation}City': 'City'
+                            }
                         ).assign(
                             operation=ioperation,
                         )
@@ -902,13 +918,14 @@ def datalist2(
                         data3.append(tmp)
                     data2 = pd.concat(data3).reset_index()
                     data2 = data2[data2['Q'] > 0]
+                    print2(data2)
                     if len(data2) > 0:
                         data2 = (
                             data2
                             .groupby(
                                 [
-                                    'srcdept',
-                                    'comname_merged', 'regiontype', 'addr', 'X', 'Y',
+                                    'cat', 'deptid',
+                                    'comname_merged', 'regiontype', 'addr', 'X', 'Y', 'City',
                                     'chem_merged', 'operation',
                                 ],
                                 as_index=False
@@ -921,9 +938,7 @@ def datalist2(
                                 "cname": lambda i: i.iloc[0],
                                 "ename": lambda i: i.iloc[0],
                                 "casno": lambda i: i.iloc[0],
-                                "DeclareDate": lambda i: ','.join(set(i)),
-                                "checkAdmin": lambda i: ','.join(set(i)),
-                                "checktime": lambda i: ','.join(set(map(str, i))),
+                                "declaretime": lambda i: ','.join(set(i)),
                             })
                             .reset_index(drop=True)
                         )
@@ -938,17 +953,29 @@ def datalist2(
                 #  廠商查詢運作化學物質 -> 查詢最新期別 end
                 #  -------------------------------------------------------------------------------------------
                 data2 = data2[[
-                    'DeclareDate', 'srcdept', 'comname_merged', 'comname', 'regiontype', 'addr', 'adminno', 'regno',
+                    'declaretime', 'cat', 'deptid', 'comname_merged', 'comname', 'regiontype', 'addr', 'adminno', 'regno',
                     'cname', 'ename', 'casno', 'chem_merged',
-                    'operation', 'X', 'Y', "Q",
-                    'checkAdmin', 'checktime',
+                    'operation', 'X', 'Y', "Q", "City"
+
                 ]]
                 data2 = data2.astype(object)
                 data2 = data2.where(pd.notnull(data2), None)
                 data2 = data2.sort_values(by=[
-                    'srcdept', 'chem_merged', 'operation', 'Q'
+                    'cat', 'deptid', 'chem_merged', 'operation', 'Q'
                 ])
                 # data2[data2.isna] = None
+
+            if data_type == 'city_count':
+                # print2(len(data2.columns))
+                # print2((data2.columns))
+                # [
+                #     'cat', 'declaretime', 'deptid', 'comname_merged', 'comname',
+                #     'regiontype', 'addr', 'adminno', 'regno', 'cname', 'ename', 'casno',
+                #     'chem_merged', 'operation', 'X', 'Y', 'Q', 'City'
+                # ]
+                stat = data2.groupby(
+                    ['City', 'operation'], as_index=False) .Q.agg(sum)
+                return stat.to_dict(orient='records')
 
             if to_html:
                 return HTMLResponse(content=data2.to_html(), status_code=200)
@@ -971,8 +998,8 @@ def datalist2(
 
             data2 = (
                 pd.DataFrame
-                .from_records(data)[cols]
-                .rename(columns=col_map)
+                .from_records(data)#[rawCols]
+                # .rename(columns=col_map)
                 .fillna('-')
                 # .astype(object)
             )
@@ -1000,6 +1027,7 @@ def datalist2(
                     "$group": {
                         "_id":
                         {
+                            'cat': '$cat',
                             'casno': '$casno',
                             'cname': '$cname',
                             'ename': "$ename",
@@ -1052,7 +1080,7 @@ def datalist2(
         query = [{}]
         if time is not None:
             query = [
-                {'DeclareDate': {'$regex': time}},
+                {'declaretime': {'$regex': time}},
             ]
         data = col.aggregate(
             [
@@ -1063,16 +1091,19 @@ def datalist2(
                     "$group": {
                         "_id":
                         {
-                            'DeclareDate': '$DeclareDate',
+                            'declaretime': '$declaretime',
                         }
                     }
                 },
-                {"$sort": {"_id.DeclareDate": 1}},
+                {"$sort": {"_id.declaretime": 1}},
                 # {"$skip": offset},
                 # {"$limit": limit}
             ])
         data = [i['_id'] for i in data]
         return list(data)
+
+    # elif data_type == 'city_statistic':
+    #     pass
 # %%
 
 

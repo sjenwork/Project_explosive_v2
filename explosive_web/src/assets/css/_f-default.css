@@ -1,0 +1,46 @@
+:root {
+  --slider-tooltip-bg: #41b6bd;
+  --bs-primary:#41b6bd;
+  --bs-secondary: #eeb412;
+  --bs-secondary-2: #daa510;
+  --bs-secondary-3: #ffc1078f;
+  --error: #b84139;
+  --soft-green: #59807f;
+  --dark-black: #222222;
+  --dark-green: #30504f;
+  --overlay: rgba(0, 0, 0, 0.7);
+  --yellow: #ffe32b;
+  --light-green: #39b8b0;
+  --white: #ffffff;
+  --dark-gray: #8b8b8b;
+  --support-gray-2-2: #d1d1d1;
+  --support-gray-3-2: #e7e7e7;
+  --status-field: #eff8f7;
+  --status-field-error: #f9f1f0;
+  --support-background: #fbfbfb;
+  --status-field-2: #eff8f7;
+  --gray-b: #d1d1d1;
+
+  --header-height: 70px;
+
+  --font-size-heading-1: 36px;
+  --font-size-heading-2: 26px;
+  --font-size-heading-3: 24px;
+  --font-size-heading-4: 21px;
+  --font-size-heading-5: 18px;
+  --font-size-heading-6: 16px;
+  --font-size-heading-7: 15px;
+  --font-size-body-1: 18px;
+  --font-size-body-2: 15px;
+  --font-size-body-3: 14px;
+  --font-size-button: 15px;
+  --font-size-minimum: 12px;
+  --font-size-menu: 15px;
+  --font-size-display-1: 96px;
+  --font-size-display-2: 60px;
+  --box-shadow-light: 2px 5px 10px #0000001e;
+
+  --page-max-container: 1366px;
+
+  --border-radius: 5px;
+}

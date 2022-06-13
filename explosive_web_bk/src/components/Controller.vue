@@ -1,7 +1,7 @@
 <template>
   <!-- NavBar -->
   <transition name="slide">
-    <div id="navbar" v-show="navbarStatus" class="fixed" :class="{ withAuto: isExpand }">
+    <div id="navbar" v-show="navbarStatus" class="fixed-top">
       <!-- 圖表結果 -->
       <div id="searchResult">
         <ul class="nav nav-tabs" id="myTab" role="tablist">
@@ -40,81 +40,119 @@
             id="home"
             role="tabpanel"
             aria-labelledby="home-tab"
-            style="height: calc(100vh - 200px); overflow-y: scroll"
+            style="height: calc(100vh - 200px); overflow: scroll"
           >
             <template v-if="tableData.rows.length > 0">
-              <div class="m-3 row">
-                <label for="searchInTable" class="col-2 col-form-label">查詢：</label>
-                <div class="col-sm-10">
+              <div
+                style="
+                  text-align: left;
+                  margin: 5px;
+                  margin-bottom: 5px;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <label
+                  >查詢：
                   <input
-                    type="text"
-                    class="form-control"
-                    id="searchInTable"
                     v-model="searchInTable"
                     @click="clickSearchInput"
                     onfocus="this.value=''"
                   />
-                </div>
-              </div>
-              <div class="btn-box d-flex justify-content-end mx-3 my-1">
-                <!-- <button
-                  type="button"
-                  class="btn btn-secondary mx-2 btn-sm"
-                  @click="latestDeclaration"
-                >
-                  最新申報
-                </button> -->
-                <button
-                  type="button"
-                  class="btn btn-secondary ml-2 btn-sm"
-                  @click="downloadResult"
-                >
-                  報表下載
+                </label>
+                <span class="download" @click="downloadResult">
+                  <label for="">報表下載</label>
                   <font-awesome-icon :icon="faArrowCircleDown" />
-                </button>
+                </span>
+                <!-- <font-awesome-icon :icon="['fas', 'bars']" /> -->
+                <!-- <img
+                                src="/src/assets/download.jpeg"
+                                style="height:30px"
+                            /> -->
               </div>
-              <!-- </div> -->
-              <template v-if="isLoadingChemData">
-                <div style="margin-top: 100px">讀取中...</div>
+              <template v-if="selectedQuery === '運作行為 與 化學物質'">
+                <table-lite
+                  :is-static-mode="true"
+                  :is-loading="tableForChemSearch.isLoading"
+                  :columns="tableForChemSearch.columns"
+                  :rows="tableForChemSearch.rows"
+                  :total="tableForChemSearch.totalRecordCount"
+                  :sortable="tableForChemSearch.sortable"
+                  @is-finished="tableLoadingFinish"
+                  @toggleinfo="handleToggleInfoFromSearchChem"
+                  :toggleOpen="toggleOpen"
+                >
+                  <td
+                    colspan="3"
+                    style="
+                      background-color: rgba(200, 240, 200, 0.5);
+                      overflow-x: scroll;
+                      overflow-x: scroll;
+                    "
+                  >
+                    <div style="margin-top: 10px; margin-bottom: 30px; width: 100%">
+                      <!-- <template> -->
+                      <div
+                        style="width: 130%; overflow-x: hidden"
+                        class="card"
+                        :value="chem"
+                        v-for="chem in [...new Set(comFacDetail.map((i) => i.name))]"
+                      >
+                        <div
+                          class="card-header"
+                          style="text-align: left; padding-left: 40px"
+                        >
+                          {{ chem }}
+                        </div>
+                        <div class="card-body">
+                          <table
+                            class="table table-hover"
+                            style="table-layout: fixed; width: 100%"
+                          >
+                            <thead>
+                              <tr>
+                                <th>來源</th>
+                                <th>運作行為</th>
+                                <th>申報期別</th>
+                                <th>運作量</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr v-for="item in comFacDetail2[chem]" :value="item.name">
+                                <th>{{ dept_e2c[item.deptid] }}</th>
+                                <th>
+                                  {{
+                                    operationOptions.filter(
+                                      (i) => i.eng == item.operation
+                                    )[0]["chn"]
+                                  }}
+                                </th>
+                                <th>{{ item.time }}</th>
+                                <th>{{ item.Quantity }}</th>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </table-lite>
               </template>
-              <template v-if="!isLoadingChemData">
-                <template v-if="selectedQuery === '運作行為 與 化學物質'">
-                  <table-lite
-                    :is-static-mode="true"
-                    :is-loading="tableForChemSearch.isLoading"
-                    :columns="tableForChemSearch.columns"
-                    :rows="tableForChemSearch.rows"
-                    :total="tableForChemSearch.totalRecordCount"
-                    :sortable="tableForChemSearch.sortable"
-                    @is-finished="tableLoadingFinish"
-                    @row-clicked="handleToggleInfoFromSearchChem"
-                  >
-                  </table-lite>
-                </template>
 
-                <template v-else-if="selectedQuery === '廠商名稱 或 統一編號'">
-                  <div style="padding-left: 16px; padding-top: 0px; text-align: left">
-                    共運作
-                    <span style="color: red; font-weight: bold">
-                      {{
-                        [...new Set(tableForFacSearch.rows.map((i) => i.cname))].length
-                      }}
-                    </span>
-                    項化學物質
-                  </div>
-                  <table-lite
-                    :is-static-mode="true"
-                    :is-loading="tableForFacSearch.isLoading"
-                    :columns="tableForFacSearch.columns"
-                    :rows="tableForFacSearch.rows"
-                    :total="tableForFacSearch.totalRecordCount"
-                    :sortable="tableForFacSearch.sortable"
-                    @is-finished="tableLoadingFinish"
-                  >
-                    <!-- @row-clicked="handleToggleInfoFromSearchFac" -->
-                    <!-- :toggleOpen="toggleOpen" -->
-                  </table-lite>
-                </template>
+              <template v-else-if="selectedQuery === '廠商名稱 或 統一編號'">
+                <table-lite
+                  :is-static-mode="true"
+                  :is-loading="tableForFacSearch.isLoading"
+                  :columns="tableForFacSearch.columns"
+                  :rows="tableForFacSearch.rows"
+                  :total="tableForFacSearch.totalRecordCount"
+                  :sortable="tableForFacSearch.sortable"
+                  @is-finished="tableLoadingFinish"
+                  @toggleinfo="handleToggleInfoFromSearchFac"
+                >
+                  <!-- :toggleOpen="toggleOpen" -->
+                </table-lite>
               </template>
             </template>
           </div>
@@ -131,9 +169,8 @@
       </div>
     </div>
   </transition>
-  <div class="fixed">
+  <div class="fixed-top">
     <!-- 搜尋選單 -->
-    <!-- :class="{'withAuto': isExpand}" -->
     <div id="searchPannel">
       <div class="container-xs px-0">
         <template v-if="true">
@@ -145,7 +182,7 @@
             >
               &#9776;
             </div>
-            <div class="col-10 border-end ps-0 d-flex">
+            <div class="col-10 border-end ps-0">
               <multiselect
                 v-model="selectedQuery"
                 placeholder="依...查詢"
@@ -156,14 +193,6 @@
                 @Select="handleSelectQuery"
                 :allowEmpty="false"
               ></multiselect>
-              <!-- <div class="btn-box">
-                              <span v-if="!isExpand" @click="isExpand = !isExpand" >
-                                <i class="fa-solid fa-expand" ></i>
-                              </span>
-                              <span v-if="isExpand" @click="isExpand = !isExpand">
-                                <i class="fa-solid fa-compress" ></i>
-                              </span>
-                          </div> -->
             </div>
           </div>
         </template>
@@ -207,7 +236,9 @@
                     @mousedown.prevent.stop="clearAll(props.search)"
                   ></div>
                 </template>
-                <span slot="noResult"> 未找到任何資訊 </span>
+                <span slot="noResult">
+                  Oops! No elements found. Consider changing the search query.
+                </span>
               </multiselect>
             </div>
           </div>
@@ -240,41 +271,14 @@
                     @mousedown.prevent.stop="clearAll(props.search)"
                   ></div>
                 </template>
-                <span slot="noResult"> 未找到任何資訊 </span>
-                <!-- <template v-slot:no-result>
-                                    此為無效值，請更改搜索
-                                </template>
-                                  <template v-slot:no-options>
-                                    此無清單列表
-                                  </template> -->
+                <span slot="noResult">
+                  Oops! No elements found. Consider changing the search query.
+                </span>
               </multiselect>
             </div>
           </div>
         </template>
         <template v-if="true">
-          <div class="row rounded-lg mx-0 row rounded-lg mx-0 border-top">
-            <!-- <div class="col-12 border-top ps-0" id="latestBox"> -->
-            <div class="" id="latestBox">
-              <input
-                class=""
-                type="checkbox"
-                value=""
-                id="flexCheckChecked"
-                style="width: 16px; height: 16px; margin-right: 6px"
-                v-model="isLatest"
-              />
-              <label
-                class=""
-                for="flexCheckChecked"
-                style="height: 16px; margin-right: 6px"
-              >
-                以各廠商最新申報期別查詢
-              </label>
-            </div>
-            <!-- </div> -->
-          </div>
-        </template>
-        <template v-if="!isLatest">
           <div class="row rounded-lg mx-0">
             <div class="col-12 border-top ps-0" id="timeslider">
               <Slider
@@ -289,143 +293,6 @@
             </div>
           </div>
         </template>
-        <template v-if="isLatest">
-          <div class="row rounded-lg mx-0">
-            <div class="col-12 border-top ps-0" id="latestBox">最新申報期別</div>
-          </div>
-        </template>
-      </div>
-    </div>
-  </div>
-  <div
-    id="tableDetails"
-    class="modal fade"
-    data-bs-keyboard="false"
-    tabindex="-1"
-    aria-labelledby="staticBackdropLabel"
-    aria-hidden="true"
-  >
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-      <div class="modal-content" style="background-color: rgba(244, 244, 244, 0.8)">
-        <div class="modal-header">
-          <h5 class="modal-title" id="staticBackdropLabel">
-            {{ selectedComFacInChemSearch }}
-          </h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div style="padding-left: 16px; padding-top: 0px; text-align: left">
-          共運作
-          <span style="color: red; font-weight: bold">
-            {{ [...new Set(comFacDetail.map((i) => i.cname))].length }}
-          </span>
-          項化學物質
-        </div>
-        <div class="modal-body">
-          <div style="margin-top: 10px; margin-bottom: 30px; width: 100%">
-            <div
-              style="
-                width: 100%;
-                overflow-x: hidden;
-                background-color: rgba(255, 255, 255, 0.5);
-              "
-              class="card"
-              :value="chem"
-              v-for="(chem, index) in [...new Set(comFacDetail.map((i) => i.cname))]"
-              :key="index"
-            >
-              <div v-if="!chem">
-                廠商未運作任何化學物質
-                <span style="color: rgba(244, 244, 244, 0)">（ps.理論上是錯的））</span>
-              </div>
-
-              <div
-                v-if="chem"
-                class="card-header"
-                style="text-align: left"
-                @click="HandleSelectedChemInChemSearch"
-              >
-                <span>
-                  {{ chem }}
-                </span>
-                <span
-                  style="
-                    margin-left: 20px;
-                    background-color: rgb(238, 180, 18);
-                    border-radius: 10px;
-                    padding: 2px;
-                    font-size: 0.3rem;
-                    padding-left: 5px;
-                    padding-right: 5px;
-                  "
-                  v-for="cat in [
-                    ...new Set(
-                      comFacDetail.filter((i) => i.cname === chem).map((i) => i.cat)
-                    ),
-                  ]"
-                >
-                  {{ catlist[cat] }}
-                </span>
-              </div>
-              <template v-if="selectedChemInChemSearchStatus">
-                <div
-                  class="card-body"
-                  style="overflow-x: scroll background-color: rgba(255, 255, 255, 0.7)"
-                >
-                  <table
-                    class="table table-hover"
-                    style="table-layout: fixed; width: 100%"
-                  >
-                    <thead>
-                      <tr>
-                        <th class="col-3" style="width: 10%">#</th>
-                        <th class="col-3" style="width: 20%">申報期別</th>
-                        <th class="col-3" style="width: 20%">來源</th>
-                        <th class="col-3" style="width: 20%">化學物質類型</th>
-                        <th class="col-3" style="width: 30%">運作行為</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr
-                        v-for="(item, index) in comFacDetail.filter(
-                          (i) => i.cname == chem
-                        )"
-                        :value="item.name"
-                        :key="index"
-                      >
-                        <td class="text-left" style="width: 10%">{{ index + 1 }}</td>
-                        <td class="text-left" style="width: 20%">
-                          {{ item.declaretime }}
-                        </td>
-                        <td class="text-left" style="width: 20%">
-                          {{ dept_e2c[item.deptid] }}
-                        </td>
-                        <td class="text-left" style="width: 20%">
-                          {{ catlist[item.cat] }}
-                        </td>
-                        <td class="text-left" style="width: 30%">
-                          <div style="padding: 0px">貯存 {{ item.storageQ }} 公噸</div>
-                          <div style="padding: 0px">製造 {{ item.prodQ }} 公噸</div>
-                          <div style="padding: 0px">製造 {{ item.usageQ }} 公噸</div>
-                          <div style="padding: 0px">製造 {{ item.importQ }} 公噸</div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </template>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer justify-content-center">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-            關閉
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -438,70 +305,41 @@ import Multiselect from "vue-multiselect";
 import TableLite from "vue3-table-lite";
 import Slider from "@vueform/slider";
 import DataFrame from "dataframe-js";
-import Plotly from "plotly.js-dist-min";
+// import Plotly from "plotly.js-dist-min";
 import { clearPlotlyTrace } from "./js/utility.js";
 import { faArrowCircleDown } from "@fortawesome/free-solid-svg-icons";
 import { utils, write } from "xlsx";
 import { saveAs } from "file-saver";
-import { Modal } from "bootstrap";
 
 onMounted(() => {
   // click point in map
   let mymap = document.querySelector("#map");
 
-  // mymap.on("plotly_click", (i) => {
-  //   try {
-  //     if (selectedQuery.value === "運作行為 與 化學物質") {
-  //       if (toggleOpen.value) {
-  //         toggleOpen.value = false;
-  //         // document.querySelector('.vtl-tbody tr').click()
-  //       }
-  //       var clickpoint = i.points[0].text.split(":")[0];
-  //       // console.log(clickpoint)
-  //       searchInTable.value = clickpoint;
-  //       // toggleOpen.value = true
-  //       // setTimeout(() => {
-  //       //     document.querySelector('.vtl-tbody tr').click()
-  //       // }, 500);
-  //     }
-  //   } catch (e) {
-  //     if (toggleOpen.value) {
-  //       // console.log(1)
-  //       // toggleOpen.value = false
-  //       // document.querySelector('.vtl-tbody tr').click()
-  //       searchInTable.value = "";
-  //       clearPlotlyTrace("fac");
-  //     }
-  //   }
-  // });
-
-  window.addEventListener("keydown", (i) => {
-    var className = document.querySelector("div.modal").className;
-    // document.querySelector("div.modal .modal-footer button").click();
-    if (i.key === "Enter") {
-      if (className.includes("show")) {
-        document.querySelector("div.modal .modal-footer button").click();
-      } else {
-        research();
+  mymap.on("plotly_click", (i) => {
+    try {
+      if (selectedQuery.value === "運作行為 與 化學物質") {
+        if (toggleOpen.value) {
+          toggleOpen.value = false;
+          document.querySelector(".vtl-tbody tr").click();
+        }
+        var clickpoint = i.points[0].text.split(":")[0];
+        // console.log(clickpoint)
+        searchInTable.value = clickpoint;
+        toggleOpen.value = true;
+        setTimeout(() => {
+          document.querySelector(".vtl-tbody tr").click();
+        }, 500);
       }
-    } else if (i.key === "Escape") {
-      data.value = [];
-      tableData.rows = [];
-      clearPlotlyTrace("all");
-      // selectedChems.value = [];
-      // selectedFacs.value = [];
-      // displayedChem.value = {};
-      // displayedFac.value = {};
+    } catch (e) {
+      if (toggleOpen.value) {
+        // console.log(1)
+        toggleOpen.value = false;
+        document.querySelector(".vtl-tbody tr").click();
+        searchInTable.value = "";
+        clearPlotlyTrace("fac");
+      }
     }
   });
-
-  //初始化
-  asyncGetChem("1"); //初始化化學物質下拉選單，隨意key
-  asyncGetFacCom("1");
-  getTime();
-
-  // getWidth();
-  // window.addEventListener('resize', getWidth);
 });
 
 // emit and props
@@ -518,24 +356,20 @@ var selectedChem = ref(""); // 選擇的化學物質
 var comFacOptions = ref([]); // 廠商列表選單
 var selectedComFac = ref(""); // 選擇的廠商
 var timeOptions = ref([]); // 時間列表
-var timeLen = ref("");
-var selectedTime = ref([0, 0]); // 選擇的時間
-var isExpand = ref(false); // 是否要全屏
-var selectedComFacInChemSearch = ref(""); // 化學物質搜尋時點擊的廠商
-var selectedChemInChemSearchStatus = ref(false); // 化學物質搜尋時點擊廠商後選定的化學物質
+var selectedTime = ref([]); // 選擇的時間
 
 // base url
 var baseurl = import.meta.env.VITE_API_BASE_URL;
 var baseurl_ver2 = import.meta.env.VITE_API_BASE_URL_ver2;
-var baseurl_ver4 = import.meta.env.VITE_API_BASE_URL_ver4;
+console.log(baseurl);
+console.log(baseurl_ver2);
 
 // 函數 與 相關參數
 var isLoadingChem = ref(false);
-var isLoadingChemData = ref(false);
 var isLoadingFacCom = ref(false);
 var asyncGetChem; // 取得化學物質列表
 var asyncGetFacCom; // 取得廠商列表
-var getTime; // 取得時間列表
+var asyncGetTime; // 取得時間列表
 
 var timeTick;
 
@@ -549,7 +383,7 @@ var navbarStatus =
 var handleToggleInfoFromSearchChem;
 var handleToggleInfoFromSearchFac;
 var comFacDetail = ref([]);
-var comFacDetail2 = ref([]);
+var comFacDetail2 = ref({});
 var toggleOpen = ref(false);
 var searchInTable = ref("");
 var tableData = reactive({ rows: [] });
@@ -561,25 +395,19 @@ var handleSelectChem;
 // var clearPlotlyTrace
 
 var downloadResult;
-var latestDeclaration;
-var isLatest = ref(false);
 
 // table
 
-var catlist = ref({
-  explosive: "易爆物",
-  hazardous: "高風險",
-});
-
 var dept_e2c = ref({
+  CAA: "交通部民用航空局",
   COA001: "農委會防檢局",
   EPZA: '"科技產業園區(經濟部加工出口區)"',
   MND: "國防部",
   MOEA001: "經濟部中部辦公室",
-  MOEA002: "經濟部工業局(自行設置)", //
+  MOEA002: "經濟部工業局(自行設置)",
   MOEA005: "經濟部礦務局",
   MOF001: "財政部關務署",
-  MOF002: "財政部國庫署", //
+  MOF002: "財政部國庫署",
   MOI001: "內政部消防署",
   MOL001: "勞動部職安署",
   MOST001: "科技部竹科管理局",
@@ -587,27 +415,8 @@ var dept_e2c = ref({
   MOST003: "科技部南科管理局",
   MOTC001: "交通部臺灣港務公司",
   TCSB: "環保署化學局",
-  CAA: "交通部民用航空局",
-  EPA003: "環保署土基會",
 });
 
-var HandleSelectedChemInChemSearch = (i) => {
-  console.log(i);
-  selectedChemInChemSearchStatus.value = !selectedChemInChemSearchStatus.value;
-};
-
-const getWidth = () => {
-  setTimeout(() => {
-    let newWidth = document.querySelector("body").clientWidth;
-    console.log("newWidth-", newWidth);
-    if (newWidth <= 450 && isExpand.value) {
-      isExpand.value = false;
-      console.log("isExpand-", isExpand.value);
-    } else if (newWidth > 451 && !isExpand.value) {
-      isExpand.value = true;
-    }
-  }, 10);
-};
 const json2arr = async (data) => {
   // console.log(data);
   // const buildData = (data) => {
@@ -636,14 +445,6 @@ const json2arr = async (data) => {
   // };
 };
 
-var object2para = (obj) => {
-  let res = [];
-  Object.entries(obj).forEach((i) => {
-    res.push(`${i[0]}=${i[1]}`);
-  });
-  return res.join("&");
-};
-
 var defineParameter = true;
 //  ------------------ 參數初始值給定 ------------------
 if (defineParameter) {
@@ -653,17 +454,65 @@ if (defineParameter) {
     { method: "廠商名稱 或 統一編號" },
   ];
   selectedQuery.value = "運作行為 與 化學物質";
-  selectedQuery.value = "廠商名稱 或 統一編號";
+  // selectedQuery.value = "廠商名稱 或 統一編號"
 
   // 取得運作行為列表
   operationOptions.value = [
     { chn: "輸入", eng: "import" },
     { chn: "貯存", eng: "storage" },
-    { chn: "製造", eng: "prod" },
+    { chn: "製造", eng: "produce" },
     { chn: "使用", eng: "usage" },
   ];
   selectedOperation.value = { chn: "貯存", eng: "storage" };
   selectedOperation.value = { chn: "使用", eng: "usage" };
+
+  // 取得化學物質列表
+  asyncGetChem = async (query) => {
+    isLoadingChem.value = true;
+    let res;
+    if (query !== "") {
+      let url = `${baseurl_ver2}/chemList?label=${query}`;
+      res = await fetch(url).then((res) => res.json());
+    } else {
+      res = [];
+    }
+    let mapping = { hazard: "高風險", explosive: "易爆物" };
+    res.map((i) => (i.label = `${mapping[i.database]} ${i.label} ${i.engname}`));
+    // console.log(res)
+    chemOptions.value = res;
+    isLoadingChem.value = false;
+  };
+
+  // 取得廠商列表
+  asyncGetFacCom = async (query) => {
+    isLoadingFacCom.value = true;
+    let res;
+    if (query !== "") {
+      let url = `${baseurl_ver2}/ComFacBizList?label=${query}`;
+      res = await fetch(url).then((res) => res.json());
+    } else {
+      res = [];
+    }
+    // console.log(res)
+    comFacOptions.value = res;
+    isLoadingFacCom.value = false;
+  };
+
+  // 取得時間列表
+  asyncGetTime = async () => {
+    var response = await fetch(`${baseurl_ver2}/timeList`);
+    var time = await response.json();
+    return time;
+  };
+  timeOptions.value = await asyncGetTime();
+
+  // 取得時間軸標籤
+  timeTick = (val) => {
+    return [...timeOptions.value].filter((i) => i.index === val)[0]["label"];
+  };
+
+  // 初始化時間
+  selectedTime.value = [timeOptions.value.length - 1, timeOptions.value.length - 1];
 
   // 處理選擇Query選項
   handleSelectQuery = (selected) => {
@@ -683,53 +532,39 @@ if (defineParameter) {
 
   // handle toggle row from table-lite
   handleToggleInfoFromSearchChem = async (info) => {
-    var tableDetailsModal = new Modal(document.getElementById("tableDetails"));
-    tableDetailsModal.show();
-    console.log("info", info);
     let state = info.state;
-    let id = info.id;
     if (state) {
       let row = info.row;
-      console.log(row);
       let tmp, url;
       // 取得廠商統計資料
-      url = `${baseurl_ver4}/mergedRecords/data_list?company_name=${row.comname_merged}&limit=1000&display=False`;
-      console.log(url);
+      url = `${baseurl_ver2}/ComFacBizHistory_allStatistic?group=${row.group}`;
+      // console.log(url)
       tmp = await fetch(url).then((res) => res.json());
-      // console.log(tmp);
-      tmp = tmp.sort((a, b) => a.cname.localeCompare(b.cname, "zh-hant"));
-      selectedComFacInChemSearch.value = row.comname;
-      // tmp = new DataFrame(tmp)
-      //   .sortBy(["declaretime", "deptid", "operation"])
-      //   .toCollection();
-      // comFacDetail2.value = {};
-      // tmp.forEach((item) => {
-      //   if (!Object.keys(comFacDetail2.value).includes(item.name)) {
-      //     comFacDetail2.value[item.name] = [];
-      //   }
-      //   comFacDetail2.value[item.name].push(item);
-      // });
+      tmp = new DataFrame(tmp).sortBy(["time", "deptid", "operation"]).toCollection();
+      comFacDetail2.value = {};
+      tmp.forEach((item) => {
+        if (!Object.keys(comFacDetail2.value).includes(item.name)) {
+          comFacDetail2.value[item.name] = [];
+        }
+        comFacDetail2.value[item.name].push(item);
+      });
       comFacDetail.value = tmp;
-      // // toggleOpen.value = true
-      // // console.log(emitData.value)
-      // tmp = [...emitData.value.data[1].data].filter((i) => i.group === row.group);
-      emit("focusResult", { state: state, row: row, id: id });
+      toggleOpen.value = true;
+      // console.log(emitData.value)
+      tmp = [...emitData.value.data[1].data].filter((i) => i.group === row.group);
+      emit("focusResult", { state: state, row: tmp });
     } else {
-      // toggleOpen.value = false
+      toggleOpen.value = false;
       // console.log(toggleOpen.value)
-      console.log("============");
       clearPlotlyTrace("fac");
     }
   };
 
   handleToggleInfoFromSearchFac = (info) => {
-    console.log(info);
-    var tableDetailsModal = new Modal(document.getElementById("tableDetails"));
-    tableDetailsModal.show();
     let state = info.state;
     if (state) {
       let row = { ...info.row };
-      console.log(row);
+      // console.log(row)
       // tmp = [...emitData.value.data[1].proc].filter(i => i.group === row.group)
       emit("focusResult", { state: true, row: [row] });
     } else {
@@ -774,38 +609,37 @@ if (defineParameter) {
       );
     }
   };
-
-  // 最新期別
-  latestDeclaration = () => {
-    selectedTime.value = [timeOptions.value.length - 1, timeOptions.value.length - 1];
-  };
 }
-// --------------------------------------------------------------------------------
+//  ---------------------------------
 //  -----------  表格清單  -----------
 var tableForChemSearch = reactive({
   isloading: false,
   columns: [
     {
       label: "廠商資訊",
-      // field: "comname",
+      field: "ComFacBizName",
       width: "60%",
       sortable: true,
       display: (row) => {
-        return ` <h5>${row.comname}</h5>
-        <div>期別：${row.declaretime}</div>
-        <div>資料來源：${dept_e2c.value[row.deptid]}</div>
-        <div>(統編：${row.adminno})</div>
-        `;
+        return `
+                    <h5>${row.ComFacBizName}</h5>
+                    <div>期別：${row.time}</div>
+                    <div>資料來源：${dept_e2c.value[row.deptid]}</div>
+                    <div>(統編：${row.BusinessAdminNo})</div>
+                    <div>(座標：[${row.lon !== "-" ? row.lon.toFixed(2) : ""}, ${
+          row.lat !== "-" ? row.lat.toFixed(2) : ""
+        }])</div>
+                    `;
       },
     },
     {
       label: "運作資訊",
-      width: "40%",
+      width: "70%",
       sortable: true,
       display: (row) => {
         return `${
           operationOptions.value.filter((i) => i.eng == row.operation)[0]["chn"]
-        } ${row.Q.toFixed(2)} 公噸`;
+        } ${row.Quantity.toFixed(2)} 公噸`;
         // return `${operationOptions.filter(i => i.eng == row.operation)[0]['eng']} ${row.Quantity.toFixed(2)} 公噸`;
       },
     },
@@ -831,26 +665,56 @@ var tableForChemSearch = reactive({
 var tableForFacSearch = reactive({
   isloading: false,
   columns: [
+    // {
+    //     label: "期別",
+    //     field: "time",
+    //     width: "20%",
+    //     sortable: true,
+    //     // display: (row) => {
+    //     //   return `${row.Quantity} 公噸`;
+    //     // },
+    // },
+    // {
+    //     label: "化學物質(資料來源)",
+    //     field: "name",
+    //     width: "30%",
+    //     sortable: true,
+    //     display: (row) => {
+    //         return `${row.name}<br>(${row.deptid})`;
+    //     },
+    // },
+    // {
+    //     label: "運作行為",
+    //     field: "operation",
+    //     width: "35%",
+    //     sortable: true,
+    // },
+
     {
       label: "運作資訊",
+      field: "ComFacBizName",
       width: "60%",
       sortable: true,
       display: (row) => {
         return `
-            <h5>${row.cname}</h5>
-            <div>期別：${row.declaretime}</div>
-            <div>資料來源：${dept_e2c.value[row.deptid]}</div>
-            `;
+                    <h5>${row.cname}</h5>
+                    <div>期別：${row.time}</div>
+                    <div>資料來源：${dept_e2c.value[row.deptid]}</div>
+                    <div>(座標：[${row.lon !== "-" ? row.lon.toFixed(2) : ""}, ${
+          row.lat !== "-" ? row.lat.toFixed(2) : ""
+        }])</div>
+                    `;
       },
     },
     {
       label: "運作量",
+      field: "Quantity",
       width: "40%",
       sortable: true,
       display: (row) => {
         return `${
           operationOptions.value.filter((i) => i.eng == row.operation)[0]["chn"]
-        } <br> ${row.Q.toFixed(2)} 公噸`;
+        } <br> ${row.Quantity.toFixed(2)} 公噸`;
         // return ` (${row.lon.toFixed(2)}, ${row.lat.toFixed(2)})<br> ${row.operation}<br> ${row.Quantity.toFixed(2)} 公噸`;
       },
     },
@@ -874,15 +738,13 @@ var tableForFacSearch = reactive({
 });
 
 //  -----------  表格清單  -----------
-// --------------------------------------------------------------------------------
+//  ---------------------------------
 
-// --------------------------------------------------------------------------------
+//  ---------------------------------
 //  ---------- 以下為 Watch ----------
 
 // 監控化學物質選項model狀態
 watch([selectedChem], ([newVal], [oldVal]) => {
-  console.log("newVal", newVal);
-  console.log("oldVal", oldVal);
   if (newVal && oldVal) {
     if (newVal.chnname !== oldVal.chnname) {
       clearPlotlyTrace("all");
@@ -938,120 +800,99 @@ watch(
 
 // watch 化學物質與廠商搜尋
 watch(
-  [
-    selectedQuery,
-    selectedOperation,
-    selectedChem,
-    selectedComFac,
-    selectedTime,
-    isLatest,
-  ],
+  [selectedQuery, selectedOperation, selectedChem, selectedComFac, selectedTime],
   async (newVal, oldVal) => {
-    var [newQuery, newOperation, newChem, newComFac, newTime, newIsLatest] = newVal;
-    var [oldQuery, oldOperation, oldChem, oldComFac, oldTime, oldIsLatest] = oldVal;
+    var [newQuery, newOperation, newChem, newComFac, newTime] = newVal;
+    var [oldQuery, oldOperation, oldChem, oldComFac, oldTime] = oldVal;
+    let newTimeObject = [];
+    // console.log(newChem)
 
-    var t0 = timeOptions.value[selectedTime.value[0]];
-    var t1 = timeOptions.value[selectedTime.value[1]];
-    console.log(t0, t1);
-    // tableData.rows = [];
-    isLoadingChemData.value = true;
-
-    console.log(newIsLatest, newQuery);
-    var para_latest = "";
-    if (newIsLatest) {
-      para_latest = "&time_latest=True";
+    // 將時間index轉為時間
+    for (let i = 0; i < newTime.length; i++) {
+      for (let j = 0; j < timeOptions.value.length; j++) {
+        if (timeOptions.value[j].index === newTime[i]) {
+          newTimeObject.push({ ...timeOptions.value[j] });
+        }
+      }
     }
+    var [t0, t1] = newTimeObject.map((i) => i.time);
 
     if (newQuery === "運作行為 與 化學物質") {
-      console.log(123, newChem, oldChem);
       if (
-        (newChem && oldChem && newChem.cname !== oldChem.cname) ||
+        (newChem && oldChem && newChem.chnname !== oldChem.chnname) ||
         (newOperation && oldOperation && newOperation.chn !== oldOperation.chn) ||
         oldTime[0] !== newTime[0] ||
         oldTime[1] !== newTime[1] ||
         (!oldChem && newChem) ||
-        (!oldOperation && newOperation) ||
-        newIsLatest !== oldIsLatest
+        (!oldOperation && newOperation)
       ) {
-        let chem = newChem.chem_merged;
+        // console.log(newChem)
+        let chemCasno = newChem.casno;
+        let chnChemName = newChem.chnname;
         let operation = newOperation.eng;
+
+        // descripition
         // console.log(" >> 化學物查詢 ")
         // console.log(`    >> 搜尋 --> ${newTimeObject[0].time}~${newTimeObject[1].time}： ${chnChemName} --> ${operation}`)
 
+        // fetch data
         data = [
           {
             dataType: "city",
-            url: `${baseurl_ver4}/mergedRecords/city_count`,
-            para:
-              `?chemical_name=${chem}&operation=${operation}&time_ge=${t0}&time_le=${t1}` +
-              para_latest,
+            url: `${baseurl_ver2}/ComFacBizHistory_allStatistic`,
+            para: `?casno=${chemCasno}&operation=${operation}&time_ge=${t0}&time_le=${t1}&method=city`,
           },
           {
             dataType: "faccon",
-            url: `${baseurl_ver4}/mergedRecords/data_list`,
-            para:
-              `?chemical_name=${chem}&operation=${operation}&time_ge=${t0}&time_le=${t1}` +
-              para_latest,
+            url: `${baseurl_ver2}/ComFacBizHistory_allStatistic`,
+            para: `?casno=${chemCasno}&operation=${operation}&time_ge=${t0}&time_le=${t1}&method=statistic`,
           },
         ];
-        // console.log(data.keys());
-        for (let ind of Object.keys(data)) {
-          console.log(ind);
+        for (let ind of data.keys()) {
           var fullUrl = `${data[ind]["url"]}${data[ind]["para"]}`;
           data[ind].fullUrl = fullUrl;
-          console.log(fullUrl);
+          // console.log(fullUrl)
           data[ind].data = await fetch(fullUrl).then((res) => res.json());
         }
+
+        //
+        // console.log(data)
+        let data_city = data[0].data;
         let data_fac = data[1].data;
         emitData.value = {
-          time: [t0, t1],
+          time: newTimeObject,
           chem: newChem,
           operation: newOperation,
           data: data,
         };
-        data_fac = data_fac.sort((a, b) => a.comname.localeCompare(b.comname, "zh-hant"));
         tableData.rows = data_fac;
-        console.log(tableData.rows);
         emit("queryFromChemSearch", emitData);
       }
-    }
-    if (newQuery === "廠商名稱 或 統一編號") {
-      if (
-        (newComFac !== "" && (newComFac !== oldComFac || newTime !== oldTime)) ||
-        newIsLatest !== oldIsLatest
-      ) {
+    } else if (newQuery === "廠商名稱 或 統一編號") {
+      if (newComFac !== "" && (newComFac !== oldComFac || newTime !== oldTime)) {
         // console.log(" >> 廠商查詢 ")
         // console.log(`    >> 搜尋${newComFac}、${newTime}`)
         // console.log(newComFac)
-        var com = newComFac.comname_merged;
         data = [
           {
-            dataType: "city",
-            url: `${baseurl_ver4}/mergedRecords/city_count`,
-            para: `?company_name=${com}&time_ge=${t0}&time_le=${t1}` + para_latest,
-          },
-          {
             dataType: "faccon",
-            url: `${baseurl_ver4}/mergedRecords/data_list`,
-            para: `?company_name=${com}&time_ge=${t0}&time_le=${t1}` + para_latest,
+            url: `${baseurl_ver2}/ComFacBizHistory_allStatistic`,
+            para: `?time_ge=${t0}&time_le=${t1}&group=${newComFac.group}&method=statistic`,
             // para: `?time_ge=${t0}&time_le=${t1}&ComFacBizName=${newComFac}`
           },
         ];
         for (let ind of data.keys()) {
           var fullUrl = `${data[ind]["url"]}${data[ind]["para"]}`;
-          console.log(fullUrl);
+          // console.log(fullUrl)
           data[ind].fullUrl = fullUrl;
           data[ind].data = await fetch(fullUrl).then((res) => res.json());
         }
         // console.log(data)
         // console.log(data)
-        var data_fac = data[1].data;
+        var data_fac = data[0].data;
         console.log(data_fac);
-        console.log(data[0].data);
-
-        data_fac = data_fac.sort((a, b) => a.cname.localeCompare(b.cname, "zh-hant"));
         tableData.rows = data_fac;
-        emitData.value = { time: [t0, t1], comFac: newComFac, data: data };
+        emitData.value = { time: newTimeObject, comFac: newComFac, data: data };
         emit("queryFromFacSearch", emitData);
         // var data_fac_merged = data[1].data
 
@@ -1072,7 +913,6 @@ watch(
         // emit('queryFromFacSearch', emitData)
       }
     }
-    isLoadingChemData.value = false;
   }
 );
 
@@ -1083,92 +923,6 @@ function tableLoadingFinish() {
     i.className = i.className.replace("col-sm-12", "col-12").replace("col-md-4", "");
   });
 }
-
-// --------------------------------------------------------------------------------
-//  ---------- 以下為下拉選單功能相關 ----------
-
-// 取得化學物質列表
-asyncGetChem = (query) => {
-  isLoadingChem.value = true;
-  let apiurl = baseurl_ver4 + "/mergedRecords";
-  let param = {
-    offset: 0,
-    limit: 100,
-    display: "True",
-    time_latest: "False",
-    to_html: "False",
-    chemical_name: query,
-  };
-  let url = `${apiurl}/chemical_list?${object2para(param)}`;
-  fetch(url)
-    .then((res) => res.json())
-    .then((res) => {
-      res.map(
-        (i) =>
-          (i.label = `${
-            catlist.value[i.cat]
-          } > ${i.cname.trim()} ${i.ename.trim()} ${i.casno.trim()}`)
-      );
-      chemOptions.value = res;
-      isLoadingChem.value = false;
-    });
-};
-
-// 取得廠商列表
-asyncGetFacCom = async (query) => {
-  let apiurl = baseurl_ver4 + "/mergedRecords";
-  let param = {
-    offset: 0,
-    limit: 100,
-    display: "True",
-    time_latest: "False",
-    to_html: "False",
-    company_name: query,
-  };
-  // let param = `offset=0&limit=100&display=true&time_latest=false&to_html=false&chemical_name=${query}`;
-  let url = `${apiurl}/company_list?${object2para(param)}`;
-  fetch(url)
-    .then((res) => res.json())
-    .then((res) => {
-      isLoadingFacCom.value = true;
-      res.map(
-        (i) =>
-          (i.label = `${i.adminno ? i.adminno : ""} ${i.comname ? i.comname : ""} ${
-            i.regno ? i.regno : ""
-          }`)
-      );
-      comFacOptions.value = res;
-      isLoadingFacCom.value = false;
-    });
-};
-
-// 取得時間列表
-getTime = () => {
-  let apiurl = baseurl_ver4 + "/mergedRecords";
-  let param = {
-    offset: 0,
-    limit: 100,
-    display: "True",
-    time_latest: "False",
-    to_html: "False",
-  };
-  let url = `${apiurl}/time_list?${object2para(param)}`;
-  fetch(url)
-    .then((res) => res.json())
-    .then((res) => {
-      console.log(res);
-      timeLen.value = res.length;
-      res = res.map((i) => i.declaretime);
-      timeOptions.value = res;
-      selectedTime.value = [0, timeLen.value - 1];
-    });
-};
-
-// 取得時間軸標籤
-timeTick = (val) => {
-  val = parseInt(val.toFixed());
-  return { ...timeOptions.value }[val];
-};
 </script>
 
 <style scoped>
@@ -1214,7 +968,7 @@ div.card-body {
 }
 
 ::v-deep(.vtl-table) {
-  overflow-x: hidden;
+  /* overflow-x: hidden; */
 }
 
 ::v-deep(.vtl-row),
@@ -1228,7 +982,7 @@ div.card-body {
 }
 
 ::v-deep(.vtl-tbody-td div) {
-  /* overflow-x: scroll; */
+  overflow-x: scroll;
   /* max-height: 72px; */
   /* max-width: 300px; */
 }
@@ -1239,9 +993,9 @@ div.card-body {
   margin: 0px;
   width: auto;
   line-height: 41px;
+  background-color: none;
   max-height: 41px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0);
 }
 
 ::v-deep(.multiselect__tags) {
@@ -1252,14 +1006,12 @@ div.card-body {
   background: rgba(255, 255, 255, 0);
   border-radius: 0px;
   border-width: 0px;
-  font-size: 16px;
 }
 
 ::v-deep(.multiselect__placeholder) {
   padding-left: 15px;
   margin: 0px;
   background-color: none;
-  padding-top: 0px;
 }
 
 ::v-deep(.multiselect__input) {
@@ -1308,12 +1060,6 @@ div.card-body {
   }
 }
 
-#latestBox {
-  line-height: 41px;
-  height: 41px;
-  vertical-align: middle;
-}
-
 .slider-target {
   padding-left: 20px;
   padding-right: 20px;
@@ -1327,7 +1073,7 @@ div.card-body {
 
 #searchResult {
   /* width: */
-  margin-top: 190px;
+  margin-top: 155px;
   margin-bottom: 40px;
 }
 
@@ -1346,7 +1092,7 @@ div.card-body {
 
 #navbar {
   width: 340px;
-  height: 106vh;
+  height: 100vh;
   background-color: rgb(0, 0, 0);
   background-color: rgba(0, 0, 0, 0.9);
   overflow-x: hidden;
@@ -1366,73 +1112,12 @@ div.card-body {
 }
 
 .tab-content input {
-  /* width: 130px; */
+  width: 130px;
 }
 
 .form-select {
   width: 40%;
   margin-left: 10px;
   display: inline-block;
-}
-.fa-expand,
-.fa-compress {
-  font-size: 20px;
-  padding: 8px;
-  vertical-align: text-top;
-  cursor: pointer;
-}
-#navbar.withAuto {
-  width: 100%;
-  /* animation: popup 0.5s; */
-}
-.fixed {
-  -webkit-transition: all 1s ease;
-  -moz-transition: all 1s ease;
-  transition: all 1s ease;
-}
-@keyframes popup {
-  0% {
-    transform: scale(0);
-  }
-  50% {
-    transform: scale(0.95);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-.d-none-table {
-  display: none;
-}
-@media (min-width: 576px) {
-  .d-sm-none-table {
-    display: none;
-  }
-  .d-sm-block-table {
-    display: block;
-  }
-}
-
-@media (max-width: 360px) {
-  #navbar {
-    width: 340px !important;
-  }
-}
-
-.card-header:hover {
-  cursor: pointer;
-  background-color: rgba(255, 255, 255, 0.5);
-}
-.card-header span:nth-child(1):hover {
-  cursor: pointer;
-  cursor: pointer;
-  color: red;
-}
-table tbody td {
-  vertical-align: middle;
-}
-table thead th {
-  vertical-align: middle;
-  text-align: center;
 }
 </style>

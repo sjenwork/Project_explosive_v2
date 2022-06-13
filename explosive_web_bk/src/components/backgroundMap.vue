@@ -5,7 +5,16 @@
 
 <script setup>
 import Plotly from "plotly.js-dist-min";
-import { onMounted, watch, ref } from "vue";
+// import * as am5 from "@amcharts/amcharts5";
+// import * as am5map from "@amcharts/amcharts5/map";
+// import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
+// import am5geodata_worldLow from "@amcharts/amcharts5-geodata/worldLow";
+
+// import * as L from "leaflet"
+// import "leaflet/dist/leaflet.css"
+// import { LMap, LGeoJson } from "@vue-leaflet/vue-leaflet";
+
+import { onMounted, watch } from "vue";
 import { clearPlotlyTrace, calculateCenter, response2Resize } from "./js/utility.js";
 
 const props = defineProps({
@@ -15,48 +24,44 @@ const props = defineProps({
 });
 var render_lib = "plotly";
 
-var operationOptions = ref([
-  { chn: "輸入", eng: "import" },
-  { chn: "貯存", eng: "storage" },
-  { chn: "製造", eng: "prod" },
-  { chn: "使用", eng: "usage" },
-]);
-
 watch(
   () => [props.focusdata],
   ([newfocusdata], [oldfocusdata]) => {
-    console.log(newfocusdata);
     // ------------------------------------------------------
     // 標記選取的廠商
+    console.log(newfocusdata);
     if (newfocusdata) {
       clearPlotlyTrace("fac");
 
       if (newfocusdata.state) {
-        var data = { ...newfocusdata.row };
-        console.log(data);
-        var plot = {
-          lon: [data.X],
-          lat: [data.Y],
-          text: [data.comname],
-          type: "scattermapbox",
-          hoverinfo: "text",
-          name: "使用者查詢",
-          // hovertext: data_fac.map((i) => i.ComFacBizName),
-          hovertemplate: "%{text}",
-          marker: {
-            color: "rgb(21,100,255)",
-            size: 20,
-            opacity: 0.7,
-            // symbol: 'x',
+        var data = newfocusdata.row;
+        // console.log(data)
+        var plot = [
+          {
+            lon: data.map((i) => i.lon),
+            lat: data.map((i) => i.lat),
+            text: data.map((i) => `${i.ComFacBizName}`),
+            type: "scattermapbox",
+            // hoverinfo: "text",
+            name: "使用者查詢",
+            // hovertext: data_fac.map((i) => i.ComFacBizName),
+            // hovertemplate: "%{text}",
+            marker: {
+              color: "rgb(21,100,255)",
+              size: 20,
+              opacity: 0.7,
+              // symbol: 'x',
+            },
           },
-        };
-        console.log(plot);
+        ];
+
         Plotly.addTraces("map", plot);
 
-        var focus = true;
+        var focus = false;
         if (focus) {
-          if (data) {
+          if (data.map((i) => i.lat)[0]) {
             var method = "relayout";
+
             if (method === "animate") {
               Plotly.animate("map", {
                 layout: {
@@ -70,21 +75,10 @@ watch(
                 },
               });
             } else if (method === "relayout") {
-              Plotly.animate("map", {
-                transition: {
-                  duration: 500,
-                  easing: "linear",
-                },
-                frame: {
-                  duration: 500,
-                  redraw: false,
-                },
-                mode: "next",
-              });
               Plotly.relayout("map", {
                 "mapbox.zoom": 9,
-                "mapbox.center.lon": data.X - 0.2,
-                "mapbox.center.lat": data.Y,
+                "mapbox.center.lon": data.map((i) => i.lon)[0] - 0.2,
+                "mapbox.center.lat": data.map((i) => i.lat)[0],
               });
             }
           }
@@ -98,7 +92,6 @@ watch(
 watch(
   () => [props.plotFromChemSearch],
   ([newPlotVal], [oldPlotVal]) => {
-    // console.log(newPlotVal);
     // ------------------------------------------------------
     // 繪製
     if (oldPlotVal !== newPlotVal) {
@@ -106,31 +99,35 @@ watch(
       var chem = newPlotVal.chem;
       var operation = newPlotVal.operation;
       var [data_city, data_fac] = newPlotVal.data;
+
       var data_city_plot = data_city.data;
       var data_fac_plot = data_fac.data;
 
-      var hovertemplate = "%{location}<br>%{z:.2f}公噸";
-      // if (operation.chn === "貯存") {
-      //   hovertemplate = hovertemplate.replace("TIMEINFO", "最大期別：%{text}<br>");
-      // } else {
-      //   hovertemplate = hovertemplate.replace("TIMEINFO", "");
-      // }
+      var hovertemplate = "%{location}<br>TIMEINFO%{z:.2f}公噸";
+      if (operation.chn === "貯存") {
+        if (time[0].time === "最新申報") {
+          hovertemplate = hovertemplate.replace("TIMEINFO", "最新期別：%{text}<br>");
+        } else {
+          hovertemplate = hovertemplate.replace("TIMEINFO", "最大期別：%{text}<br>");
+        }
+      } else {
+        hovertemplate = hovertemplate.replace("TIMEINFO", "");
+      }
 
-      let RegionType = [...new Set([...data_fac_plot].map((i) => i.regiontype))];
-      let size = [...data_fac_plot].map((i) => i.Q);
+      let RegionType = [...new Set([...data_fac_plot].map((i) => i.RegionType))];
+      let size = [...data_fac_plot].map((i) => i.Quantity);
       size = size.map((j) => j / Math.max(...size) + 10);
-
       var plot1 = [
         {
           name: "",
           type: "choroplethmapbox",
           geojson: "./taiwan_county_geojson_mini.json",
-          locations: [...data_city_plot].map((i) => i.City),
-          // text: operation.chn === "貯存" ? [...data_city_plot].map((i) => i.time) : " ",
+          locations: [...data_city_plot].map((i) => i.city),
+          text: operation.chn === "貯存" ? [...data_city_plot].map((i) => i.time) : " ",
           hovertemplate: hovertemplate,
           hoverlabel: { font: { size: 22 } },
           featureidkey: "properties.NAME_2014",
-          z: [...data_city_plot].map((i) => i.Q),
+          z: [...data_city_plot].map((i) => i.Quantity),
           showscale: false,
           zmin: 0,
           colorscale: [
@@ -141,39 +138,20 @@ watch(
       ];
       var plot2 = [];
       RegionType.forEach((rt) => {
-        console.log("rt-", rt);
-        var X = [...data_fac_plot].filter((i) => i.regiontype === rt).map((i) => i.X);
-        var Y = [...data_fac_plot].filter((i) => i.regiontype === rt).map((i) => i.Y);
+        var lon = [...data_fac_plot].filter((i) => i.RegionType === rt).map((i) => i.lon);
+        var lat = [...data_fac_plot].filter((i) => i.RegionType === rt).map((i) => i.lat);
         var text = [...data_fac_plot]
-          .filter((i) => i.regiontype === rt)
-          .map((i) => `${i.comname}:<br> ${i.declaretime} <br> ${i.Q}`);
-        var color = [...data_fac_plot]
-          .filter((i) => i.regiontype === rt)
-          .map((i) => {
-            if (i.regiontype === "科學園區") {
-              return "#41b6bd";
-            } else if (i.regiontype === "工業區") {
-              return "#dc3545";
-            } else if (i.regiontype === "加工出口區") {
-              return "#5b2b75";
-            } else if (i.regiontype === "礦區") {
-              return "#eeb412";
-            } else if (i.regiontype === "其他") {
-              return "#84c779";
-            } else if (i.regiontype === "港區") {
-              return "#f171ae";
-            }
-          });
+          .filter((i) => i.RegionType === rt)
+          .map((i) => `${i.ComFacBizName}:<br> ${i.time} <br> ${i.Quantity}`);
         plot2.push({
-          lon: X,
-          lat: Y,
+          lon: lon,
+          lat: lat,
           text: text,
           type: "scattermapbox",
           name: rt,
           hovertemplate: "%{text} 公噸",
           marker: {
             size: size,
-            color: color,
           },
           selected: {
             color: "red",
@@ -181,7 +159,6 @@ watch(
           },
         });
       });
-
       var plot = [...plot1, ...plot2];
       clearPlotlyTrace("all");
       Plotly.addTraces("map", plot);
@@ -197,47 +174,23 @@ watch(
     if (oldPlotVal !== newPlotVal) {
       // ---
       var time = newPlotVal.time;
-      var data_city = newPlotVal.data[0].data;
-      var data_fac = newPlotVal.data[1].data;
+      var data_fac = newPlotVal.data[0].data;
 
       var data_fac_plot = data_fac;
-      console.log(data_fac_plot);
 
-      let regiontype = [...new Set([...data_fac_plot].map((i) => i.regiontype))];
-      let size = [...data_fac_plot].map((i) => i.Q);
-      size = size.map((j) => j / Math.max(...size) + 10);
-      // size = size.map((j) => j / Math.max(...size) + 20);
-      console.log(data_fac_plot);
+      let RegionType = [...new Set([...data_fac_plot].map((i) => i.RegionType))];
+      let size = [...data_fac_plot].map((i) => i.Quantity);
+      size = size.map((j) => j / Math.max(...size) + 20);
+
       var plot2 = [];
-      regiontype.forEach((rt) => {
-        var lon = [...data_fac_plot].filter((i) => i.regiontype === rt).map((i) => i.X);
-        var lat = [...data_fac_plot].filter((i) => i.regiontype === rt).map((i) => i.Y);
+      RegionType.forEach((rt) => {
+        var lon = [...data_fac_plot].filter((i) => i.RegionType === rt).map((i) => i.lon);
+        var lat = [...data_fac_plot].filter((i) => i.RegionType === rt).map((i) => i.lat);
         var text = [...data_fac_plot]
-          .filter((i) => i.regiontype === rt)
-          .map((i) => {
-            console.log(i.operation);
-            return `
-              ${i.comname}:<br> ${i.declaretime} <br> ${
-              operationOptions.value.filter((j) => j.eng === i.operation)[0]["chn"]
-            } ${i.Q.toFixed(2)}`;
-          });
-        const color = [...data_fac_plot]
-          .filter((i) => i.regiontype === rt)
-          .map((i) => {
-            if (i.regiontype === "科學園區") {
-              return "#41b6bd";
-            } else if (i.regiontype === "工業區") {
-              return "#dc3545";
-            } else if (i.regiontype === "加工出口區") {
-              return "#5b2b75";
-            } else if (i.regiontype === "礦區") {
-              return "#eeb412";
-            } else if (i.regiontype === "其他") {
-              return "#84c779";
-            } else if (i.regiontype === "港區") {
-              return "#f171ae";
-            }
-          });
+          .filter((i) => i.RegionType === rt)
+          .map(
+            (i) => `${i.name}:<br> ${i.time} <br> ${i.operation} ${i.Quantity.toFixed(2)}`
+          );
         plot2.push({
           lon: lon,
           lat: lat,
@@ -247,7 +200,6 @@ watch(
           hovertemplate: "%{text} 公噸",
           marker: {
             size: size,
-            color: color,
           },
           selected: {
             color: "red",
@@ -256,7 +208,6 @@ watch(
         });
       });
       var plot = [...plot2];
-      console.log("plot", plot);
       clearPlotlyTrace("all");
       Plotly.addTraces("map", plot);
 

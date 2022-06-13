@@ -10,7 +10,6 @@ from tqdm import tqdm
 from enum import Enum
 from fastapi.responses import HTMLResponse
 from src.sql_tools import get_conn as connSQL
-import numpy as np
 # from tabulate import tabulate
 
 
@@ -149,7 +148,7 @@ colname_sql2mongo_map = {
     'StorageQuantity': 'storageQ',
     'StorageTWD97X': 'storageX',
     'StorageTWD97Y': 'storageY'
-}
+    }
 
 col_map = {
     'casno': 'CAS No.',
@@ -201,111 +200,110 @@ if preparing:
         print(sn, data.shape)
         return data
 
-    def read_from_sqlserver():
-        def read(tablename):
-            conn = connSQL('mssql_chemtest')
-            src = tablename.replace('MergeData', '').lower()
-            data = (
-                pd.read_sql(f'select * from {tablename}', con=conn)
-                .assign(cat=src)
-            )
-            return data
-
+    def read_sql():
+        conn = connSQL('mssql_chemtest')
+        exp = pd.read_sql('select * from ExplosiveMergeData', con=conn)
+        haz = pd.read_sql('select * from HazardousMergeData', con=conn)
         drop = [
             'ProductionZipCode', 'UseageZipCode', 'StorageZipCode',
             'FCOUNTY', 'FTOWN', 'FCOUNTY_TOWN', 'CountyTownship', 'UpdateDate',
             'IsMerge', 'AdminNo'
         ]
-        Qcols = [f'{operation}Q' for operation in operations]
-        tablelist = ['ExplosiveMergeData', 'HazardousMergeData']
-        datalist = list(map(read, tablelist))
-        data = (
-            pd.concat(datalist)
-            .reset_index(drop=True)
-            .drop(columns=drop)
-            .rename(columns=colname_sql2mongo_map)
-            .replace('-', None)
-            .astype(dict(zip(Qcols, [float]*len(Qcols))))
-        )
-        return data
-
-    def TWD97toWGS84_and_LocateCity(df):
-        taiwan = gpd.read_file('src/info/county.json')
-        taiwan = taiwan.set_index("COUNTYNAME")['geometry']
-
-        for operation in operations:
-            data = (
-                gpd.GeoDataFrame(
-                    df[[f'{operation}X', f'{operation}Y']],
-                    geometry=gpd.points_from_xy(
-                        df[f'{operation}X'], df[f'{operation}Y'], crs='epsg:3826'))
-                .to_crs('epsg:4326')
-            )
-            geometry = data[['geometry']]
-            pnts = (
-                geometry
-                .assign(**{key: geometry.within(geom) for key, geom in taiwan.items()})
-                .iloc[:, 1:]
-                .replace(False, np.nan)
-                .stack()
-                .reset_index()
-                .rename(columns={'level_0': 'index', 'level_1': f'{operation}City'})
-                .drop(columns=[0])
-                .set_index('index')
-            )
-            df[f'{operation}X2'] = data.geometry.apply(
-                lambda i: i.x if not i.is_empty else '')
-            df[f'{operation}Y2'] = data.geometry.apply(
-                lambda i: i.y if not i.is_empty else '')
-            df = df.merge(pnts, left_index=True, right_index=True, how='left')
-            df = df.where(pd.notnull(df), None)
-        return df
-
+        exp = exp.drop(columns=drop)
+        haz = haz.drop(columns=drop)
+        exp = exp.rename(columns=colname_sql2mongo_map)
+        haz = haz.rename(columns=colname_sql2mongo_map)
 
     # %%
-    operations = ['import', 'prod', 'usage', 'storage']
-    df = read_from_sqlserver()
-    df2 = TWD97toWGS84_and_LocateCity(df)
+    sheets = pd.ExcelFile('rawdata/高風險化學品2次上傳彙整.xlsx').sheet_names
 
+    dfs = list(map(read_excel, sheets[:]))
+    df = pd.concat(dfs).astype(object)
+    df = df.where(pd.notnull(df), None)
+    df = df.replace('-', None)
+    # df = df.drop(columns=[
+    #     'resname', 'restel', 'resphone', 'emername', 'emertel', 'emerphone',
+    #     'placetype', 'regionNname',
+    # ])
+    df.importQ = df.importQ.fillna(0)
+    df.prodQ = df.prodQ.fillna(0)
+    df.usageQ = df.usageQ.fillna(0)
+    df.storageQ = df.storageQ.fillna(0)
 
+    for operation in ['import', 'prod', 'usage', 'storage']:
+        data = gpd.GeoDataFrame(
+            df[[f'{operation}X', f'{operation}Y']],
+            geometry=gpd.points_from_xy(
+                df[f'{operation}X'], df[f'{operation}Y'], crs='epsg:3826')
+        )
+        data = data.to_crs('epsg:4326')
+        df[f'{operation}X2'] = data.geometry.apply(
+            lambda i: i.x if not i.is_empty else '')
+        df[f'{operation}Y2'] = data.geometry.apply(
+            lambda i: i.y if not i.is_empty else '')
     df['id'] = list(range(len(df)))
+    df = df.reset_index(drop=True)
 
-    df3 = copy.deepcopy(df2)
+    # df = df.to_dict(orient='records')
+
+    df2 = copy.deepcopy(df)
     # %%
     # 處理廠商整合
-
-    df3['comname_merged'] = ''
-    df3['addr_merged'] = ''
-    for irow, row in tqdm(df2.iterrows(), desc='grouping factory', total=len(df2)):
-        if df3.loc[irow, 'comname_merged'] != '':
+    df2['comname_merged'] = ''
+    df2['addr_merged'] = ''
+    for irow, row in tqdm(df.iterrows(), desc='grouping factory', total=len(df)):
+        # for irow, row in df.iterrows():
+        # if irow > 10:
+        #     continue
+        if df2.loc[irow, 'comname_merged'] != '':
             continue
         name = row['comname']
         addr = row['addr']
-        ind = df2[(df2.addr == addr) | (df2.comname == name)].index
-        namelist = ','.join(list(set(df3.loc[ind, 'comname'].tolist())))
-        df3.loc[ind, 'comname_merged'] = namelist
-        addrlist = ','.join(list(set(df3.loc[ind, 'addr'].tolist())))
-        df3.loc[ind, 'addr_merged'] = addrlist
+        ind = df[(df.addr == addr) | (df.comname == name)].index
+
+        # comname_merged = df2.loc[ind]
+        # comname_merged = comname_merged.apply(
+        #     lambda i: name if i['comname_merged'] == name else f"{name}({i['comname_merged']})", axis=1)
+        # df2.loc[ind, 'comname_merged'] = comname_merged.tolist()
+
+        # addr_merged = df2.loc[ind]
+        # addr_merged = addr_merged.apply(
+        #     lambda i: name if i['addr_merged'] == name else f"{name}({i['addr_merged']})", axis=1)
+        # df2.loc[ind, 'addr_merged'] = addr_merged.tolist()
+        namelist = ','.join(list(set(df2.loc[ind, 'comname'].tolist())))
+        df2.loc[ind, 'comname_merged'] = namelist
+        addrlist = ','.join(list(set(df2.loc[ind, 'addr'].tolist())))
+        df2.loc[ind, 'addr_merged'] = addrlist
         # print(irow)
 
     # %%
     # 處理化學物質整合
-    df3['chem_merged'] = ''
-    for irow, row in tqdm(df2.iterrows(), desc='grouping chem', total=len(df2)):
-        if df3.loc[irow, 'chem_merged'] != '':
+    df2['chem_merged'] = ''
+    for irow, row in tqdm(df.iterrows(), desc='grouping chem', total=len(df)):
+        if df2.loc[irow, 'chem_merged'] != '':
             continue
         casno = row.casno
         cname = row.cname
         ename = row.ename
-        ind = df2[(df2.casno == casno) | (df2.cname == cname)
-                 | (df2.ename == ename)].index
+        ind = df[(df.casno == casno) | (df.cname == cname)
+                 | (df.ename == ename)].index
 
-        chemlist = ','.join(list(set(df3.loc[ind, 'casno'].tolist())))
-        df3.loc[ind, 'chem_merged'] = chemlist
+        chemlist = ','.join(list(set(df2.loc[ind, 'casno'].tolist())))
+        df2.loc[ind, 'chem_merged'] = chemlist
 
     # %%
-    df3['id'] = df3.index
-    df4 = df3.to_dict(orient='records')
+    # 取得化學物質列表
+    # sel_col_chem = ['casno', 'cname', 'ename', 'chem_merged']
+    # chemical_list = df2[sel_col_chem].drop_duplicates(subset=sel_col_chem[:-1])
+
+    # %%
+    # 取得廠商列表
+    # sel_col_com = ['comname', 'adminno', 'regno', 'comname_merged']
+    # company_list = df2[sel_col_com].drop_duplicates(subset=sel_col_com[:-1])
+
+    # %%
+
+    df3 = df2.to_dict(orient='records')
     # chemical_list = chemical_list.to_dict(orient='records')
     # company_list = company_list.to_dict(orient='records')
 
@@ -314,7 +312,7 @@ if preparing:
     if writingdb:
         client = MongoClient(f"mongodb://localhost:27017/",
                              serverSelectionTimeoutMS=5)
-        db = client['explosiveNhazardous']
+        db = client['explosive']
         # 寫資料
         col = db.mergedRecords
         try:
@@ -323,7 +321,7 @@ if preparing:
             pass
         res = col.bulk_write(
             [UpdateOne({'id': i['id']}, {"$set": i}, upsert=True)
-             for i in df4]
+             for i in df3]
         )
         # 寫化學物質列表
         # col = db.chemical_list

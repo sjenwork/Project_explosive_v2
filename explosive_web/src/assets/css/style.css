@@ -1,0 +1,214 @@
+/* @import './_table.css'; */
+@import './_f-default.css';
+/* 文字 */
+.text-left {
+  text-align: left;
+}
+.h5, h5 {
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1030;
+}
+.multiselect__single {
+  background: rgba(255, 255, 255, 0);
+}
+.multiselect__content-wrapper, .multiselect--active {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.vtl-card {
+  margin: 10px;
+}
+.vtl-card, .vtl-tbody-td div {
+  font-size: 14px;
+}
+.primary-color {
+  color: var(--slider-tooltip-bg,#10b981)
+}
+.vtl-tbody {
+  text-align: left;
+}
+.tab-pane {
+  background: white;
+}
+table {
+  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-size: 15px;
+  border-collapse: separate!important;
+  table-layout: fixed;
+  width: 80%;
+  border-spacing: 0 5px; /* this is the ultimate fix */
+}
+table th {
+  text-align: left;
+  padding: 5px 15px;
+}
+table td {
+  background-color: white;
+  padding: 10px!important;
+}
+.vtl-thead-th {
+  border-color: #f5f6f8!important;
+  background-color:#f5f6f8!important;
+  color: #343a40!important;
+}
+
+.vtl-table thead th:first-child {
+  border-radius: 5px 0 0 5px;
+  border-left: 1px solid #f5f6f8;
+  border-bottom: 1px solid #f5f6f8;
+}
+.vtl-table thead th:last-child {
+  border-radius: 0px 5px 5px 0px;
+  border-right: 1px solid #f5f6f8;
+  border-bottom: 1px solid #f5f6f8;
+}
+
+.vtl-table-bordered td:first-child {
+  border-right: 0px solid #dee2e6!important;
+}
+.vtl-table-bordered td:last-child {
+  border-left: 0px solid #dee2e6!important;
+}
+table .vtl-tbody-td:first-child {
+  width: 60%;
+  border-left-width: 1px;
+  border-radius: 5px 0 0 5px;
+  border-left: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+}
+table .vtl-tbody-td:last-child {
+  width: 40%;
+  border-right-width: 1px;
+  border-radius: 0 5px 5px 0;
+  border-right: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+  ;
+}
+table thead {
+  display: table;
+  table-layout: fixed;
+  width: 100%;
+}
+table tbody {
+  display: table;
+  table-layout: fixed;
+  width: 100%;
+  border-spacing: 0 10px;
+}
+
+.table {
+  margin-bottom: 0rem;
+}
+.table>:not(:first-child) {
+  border-top: none;
+}
+#tableDetails table{
+  border-collapse: collapse!important;
+}
+#tableDetails th{
+  padding: 10px;
+}
+/* 分頁 */
+.vtl-paging-pagination-div {
+  margin: 20px 0 10px;
+}
+.vtl-pagination {
+  justify-content: center!important;
+}
+.page-link {
+  color: var(--bs-primary)!important;
+}
+
+.vtl-paging-pagination-page-li-prev.disabled .page-link, .vtl-paging-pagination-page-li-first.disabled .page-link,
+.vtl-paging-pagination-page-li-next .page-link,
+.vtl-paging-pagination-page-li-last.disabled .page-link {
+  color: #6c757d!important;
+}
+
+.vtl-paging-pagination-page-li-number.disabled .page-link{
+  background-color: var(--bs-primary)!important;
+  color: var(--white)!important;
+}
+.page-link:focus {
+  box-shadow: 0 0 0 0.25rem rgb(13 217 253 / 25%);
+}
+
+.vtl-paging-info {
+    margin: 0 0 10px
+}
+
+.vtl-paging-count-dropdown, .vtl-paging-page-dropdown {
+  padding: 5px!important;
+  margin: 0 5px!important;
+}
+
+/* tabs */
+.nav-tabs {
+  border-bottom: 1px solid var(--bs-primary);
+}
+.nav-link {
+  color: #6c757d;
+}
+.nav-link:focus, .nav-link:hover {
+  color: #495057;
+}
+.nav-link:focus, .nav-tabs .nav-link:hover {
+  border-color: #e9ecef #e9ecef var(--bs-primary) #e9ecef
+}
+.nav-tabs .nav-link.active {
+  border-color: var(--bs-primary) var(--bs-primary) #fff;
+}
+
+/* select */
+.multiselect__option--highlight {
+  background: var(--slider-tooltip-bg);
+}
+
+.multiselect__option--selected.multiselect__option--highlight {
+  background: var(--bs-secondary);
+}
+
+/* slider-tooltip  */
+/* .slider-tooltip {
+  background: #24ed9d;
+  border: 1px solid #24ed9d;
+}*/
+.slider-connect {
+  background: var(--slider-tooltip-bg);
+}
+
+/* button */
+.btn-sm {
+  min-width: 90px;
+  line-height: 1.2;
+  font-size: 12px
+}
+.btn-secondary {
+  border-color: var(--bs-secondary);
+  background: var(--bs-secondary);
+}
+
+.btn-secondary {
+  border-color: var(--bs-secondary);
+  background: var(--bs-secondary);
+}
+.btn-secondary:active, .btn-secondary:hover, .btn-secondary:focus {
+  background-color: var(--bs-secondary-2);
+  border-color: var(--bs-secondary-2);
+
+}
+.btn-secondary:active, .btn-secondary:focus, .btn-secondary:active:focus {
+  box-shadow: 0 0 0 0.25rem #ffc1078f;
+}
+
+/* 地圖 */
+#map {
+  overflow: hidden;
+}
