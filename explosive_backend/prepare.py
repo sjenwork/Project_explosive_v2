@@ -25,6 +25,24 @@ def print2(message, path='rel'):
     print(f' >> {message}     <-- {fn}:{no}')
 
 
+explosive_list = [
+    {'casno': "67-64-1", 'cname': "丙酮", "ename": "acetone"},
+    {'casno': "74-86-2", 'cname': "乙炔", "ename": "Acetylene"},
+    {'casno': "6484-52-2", 'cname': "硝酸銨", "ename": "Ammonium nitrate"},
+    {'casno': "12190-79-3", 'cname': "鋰電池", "ename": "Lithium cobaltate"},
+    {'casno': "7439-93-2", 'cname': "鋰", "ename": "Lithium"},
+    {'casno': "1333-74-0", 'cname': "氫氣", "ename": "hydrogen"},
+    {'casno': "108-88-3", 'cname': "甲苯", 'ename': "methyl-Benzene"},
+    {'casno': "67-63-0", 'cname': "異丙醇", "ename": "Isopropanol"},
+    {'casno': "7775-09-9", 'cname': "氯酸鈉", "ename": "Sodium chlorate"},
+    {'casno': "7803-62-5", 'cname': "矽甲烷", "ename": "Silane"},
+    {'casno': "107-13-1", 'cname': "丙烯腈", "ename": "Cyanoethylene"},
+    {'casno': "75-21-8", 'cname': "環氧乙烷", "ename": "Ethene oxide"},
+    {'casno': "75-56-9", 'cname': "環氧丙烷", "ename": "Propyleneoxide"},
+    {'casno': "7722-84-1", 'cname': "過氧化氫", "ename": "Hydrogen peroxide"},
+    {'casno': "1338-23-4", 'cname': "過氧化丁酮", "ename": "2-Butanone peroxide"},
+]
+
 tags_metadata = [
     {
         'name': '易爆物與高風險化學物質 ver4',
@@ -261,12 +279,10 @@ if preparing:
             df = df.where(pd.notnull(df), None)
         return df
 
-
     # %%
     operations = ['import', 'prod', 'usage', 'storage']
     df = read_from_sqlserver()
     df2 = TWD97toWGS84_and_LocateCity(df)
-
 
     df['id'] = list(range(len(df)))
 
@@ -297,8 +313,8 @@ if preparing:
         casno = row.casno
         cname = row.cname
         ename = row.ename
-        ind = df2[(df2.casno == casno) | (df2.cname == cname)
-                 | (df2.ename == ename)].index
+        ind = df2[(df2.casno == casno)].index  # | (df2.cname == cname)
+        #  | (df2.ename == ename)].index
 
         chemlist = ','.join(list(set(df3.loc[ind, 'casno'].tolist())))
         df3.loc[ind, 'chem_merged'] = chemlist

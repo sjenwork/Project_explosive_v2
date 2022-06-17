@@ -6,7 +6,7 @@
 <script setup>
 import Plotly from "plotly.js-dist-min";
 import { onMounted, watch, ref } from "vue";
-import { clearPlotlyTrace, calculateCenter, response2Resize } from "./js/utility.js";
+import { clearPlotlyTrace, response2Resize } from "./js/utility.js";
 
 const props = defineProps({
   plotFromChemSearch: Object,
@@ -25,7 +25,7 @@ var operationOptions = ref([
 watch(
   () => [props.focusdata],
   ([newfocusdata], [oldfocusdata]) => {
-    console.log(newfocusdata);
+    //  console.log(newfocusdata);
     // ------------------------------------------------------
     // 標記選取的廠商
     if (newfocusdata) {
@@ -33,7 +33,7 @@ watch(
 
       if (newfocusdata.state) {
         var data = { ...newfocusdata.row };
-        console.log(data);
+        //  console.log(data);
         var plot = {
           lon: [data.X],
           lat: [data.Y],
@@ -50,7 +50,7 @@ watch(
             // symbol: 'x',
           },
         };
-        console.log(plot);
+        //  console.log(plot);
         Plotly.addTraces("map", plot);
 
         var focus = true;
@@ -81,11 +81,14 @@ watch(
                 },
                 mode: "next",
               });
-              Plotly.relayout("map", {
-                "mapbox.zoom": 9,
-                "mapbox.center.lon": data.X - 0.2,
-                "mapbox.center.lat": data.Y,
-              });
+              //  console.log(data.X);
+              if (data.X != "") {
+                Plotly.relayout("map", {
+                  "mapbox.zoom": 9,
+                  "mapbox.center.lon": data.X - 0.2,
+                  "mapbox.center.lat": data.Y,
+                });
+              }
             }
           }
         }
@@ -141,7 +144,7 @@ watch(
       ];
       var plot2 = [];
       RegionType.forEach((rt) => {
-        console.log("rt-", rt);
+        //  console.log("rt-", rt);
         var X = [...data_fac_plot].filter((i) => i.regiontype === rt).map((i) => i.X);
         var Y = [...data_fac_plot].filter((i) => i.regiontype === rt).map((i) => i.Y);
         var text = [...data_fac_plot]
@@ -200,26 +203,50 @@ watch(
       var data_city = newPlotVal.data[0].data;
       var data_fac = newPlotVal.data[1].data;
 
+      var data_city_plot = data_city;
       var data_fac_plot = data_fac;
-      console.log(data_fac_plot);
 
       let regiontype = [...new Set([...data_fac_plot].map((i) => i.regiontype))];
       let size = [...data_fac_plot].map((i) => i.Q);
       size = size.map((j) => j / Math.max(...size) + 10);
-      // size = size.map((j) => j / Math.max(...size) + 20);
-      console.log(data_fac_plot);
+
+      var locations = [...new Set([...data_city_plot].map((i) => i.City))];
+      var zs = locations.length ? Array(locations.length).fill(0) : [];
+      var plot1 = [
+        {
+          name: "",
+          type: "choroplethmapbox",
+          geojson: "./taiwan_county_geojson_mini.json",
+          locations: locations,
+          // text: operation.chn === "貯存" ? [...data_city_plot].map((i) => i.time) : " ",
+          hovertemplate: "%{location}",
+          hoverlabel: { font: { size: 22 } },
+          featureidkey: "properties.NAME_2014",
+          z: zs,
+          showscale: false,
+          zmin: 0,
+          colorscale: [
+            [0, "rgba(255,250,205,.7)"],
+            [1, "rgba(222,230,52,.7)"],
+          ],
+        },
+      ];
+
       var plot2 = [];
       regiontype.forEach((rt) => {
         var lon = [...data_fac_plot].filter((i) => i.regiontype === rt).map((i) => i.X);
         var lat = [...data_fac_plot].filter((i) => i.regiontype === rt).map((i) => i.Y);
-        var text = [...data_fac_plot]
+        var hovertemplate = [...data_fac_plot]
           .filter((i) => i.regiontype === rt)
           .map((i) => {
-            console.log(i.operation);
-            return `
-              ${i.comname}:<br> ${i.declaretime} <br> ${
-              operationOptions.value.filter((j) => j.eng === i.operation)[0]["chn"]
-            } ${i.Q.toFixed(2)}`;
+            return (
+              `${i.comname}` +
+              `<br>${i.declaretime}` +
+              `<br>${
+                operationOptions.value.filter((j) => j.eng === i.operation)[0]["chn"]
+              }` +
+              `${i.Q.toFixed(2)} 公噸`
+            );
           });
         const color = [...data_fac_plot]
           .filter((i) => i.regiontype === rt)
@@ -238,13 +265,14 @@ watch(
               return "#f171ae";
             }
           });
+
         plot2.push({
           lon: lon,
           lat: lat,
-          text: text,
+          // text: text,
           type: "scattermapbox",
           name: rt,
-          hovertemplate: "%{text} 公噸",
+          hovertemplate: hovertemplate,
           marker: {
             size: size,
             color: color,
@@ -255,8 +283,8 @@ watch(
           },
         });
       });
-      var plot = [...plot2];
-      console.log("plot", plot);
+
+      var plot = [...plot1, ...plot2];
       clearPlotlyTrace("all");
       Plotly.addTraces("map", plot);
 
@@ -307,7 +335,7 @@ function initMap(center = { lon: 121, lat: 23.7 }) {
       },
       showlegend: true,
       legend: {
-        bgcolor: "rgba(255,255,220,.6)",
+        bgcolor: "rgba(240,240,240,1)",
         bordercolor: "black",
         borderwidth: 1,
         x: 0.99,
@@ -315,7 +343,7 @@ function initMap(center = { lon: 121, lat: 23.7 }) {
         xanchor: "right",
         yanchor: "bottom",
         font: {
-          size: 20,
+          size: 24,
         },
       },
     };
@@ -332,7 +360,7 @@ function initMap(center = { lon: 121, lat: 23.7 }) {
     // let mymap = document.querySelector('#map')
     // mymap.on('plotly_click', (i) => {
     //   var clickpoint = i.points[0].text.split(':')[0]
-    //   console.log(clickpoint)
+    // //  console.log(clickpoint)
     // })
   } else if (render_lib === "leaflet") {
     var root = am5.Root.new("map");

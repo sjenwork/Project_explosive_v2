@@ -4,10 +4,14 @@ const range = n => Array.from(Array(n).keys())
 
 const clearPlotlyTrace = (which = 'all') => {
     let trace = document.querySelector("#map").data;
+
     let traceLen = trace.length
 
     if (which === 'all') {
         Plotly.deleteTraces("map", range(traceLen).splice(1,))
+        // if(piechart){
+        //     
+        // }
 
 
     } else if (which === 'fac') {
@@ -18,6 +22,16 @@ const clearPlotlyTrace = (which = 'all') => {
                 Plotly.deleteTraces("map", [ind])
             }
         })
+    }else if (which === 'chart') {
+        let piechart = document.querySelector("#piechart");
+        let barchart = document.querySelector("#barchart");
+        if(piechart){
+            piechart.remove()
+        }
+        if(barchart){
+            barchart.remove()
+        }
+
     }
     // Plotly.relayout("map", {
     //     'mapbox.center.lon': calculateCenter(),
@@ -28,17 +42,17 @@ const clearPlotlyTrace = (which = 'all') => {
 }
 
 const response2Resize = () => {
-    window.addEventListener('resize', () => {
-        Plotly.relayout("map", { 'mapbox.center.lon': calculateCenter() })
-    })
+//     window.addEventListener('resize', () => {
+//         Plotly.relayout("map", { 'mapbox.center.lon': calculateCenter() })
+//     })
 }
 
 const calculateCenter = () => {
-    let width = document.querySelector('body').clientWidth
-    // 螢幕寬度1200 => lon=120
-    // 螢幕寬度400 => lon=121
-    let lon = (1200 - width) / (1200 - 400) * (121 - 119.4) + 119.4;
-    console.log('lon-', lon);
-    return lon
+    // let width = document.querySelector('body').clientWidth
+    // // 螢幕寬度1200 => lon=120
+    // // 螢幕寬度400 => lon=121
+    // let lon = (1200 - width) / (1200 - 400) * (121 - 119.4) + 119.4;
+    // console.log('lon-', lon);
+    // return lon
 }
 export { range, clearPlotlyTrace, calculateCenter, response2Resize }

@@ -1,33 +1,41 @@
 <template>
   <!-- NavBar -->
   <transition name="slide">
-    <div id="navbar" v-show="navbarStatus" class="fixed" :class="{ withAuto: isExpand }">
+    <div
+      id="navbar"
+      v-show="navbarStatus"
+      class="fixed"
+      :class="{ withAuto: isExpand }"
+      v-touch:swipe.left="swipeHandler"
+    >
       <!-- 圖表結果 -->
       <div id="searchResult">
         <ul class="nav nav-tabs" id="myTab" role="tablist">
+          <!-- 表格資訊標籤 -->
           <li class="nav-item w-50" role="presentation">
             <button
-              class="nav-link active w-100"
-              id="home-tab"
+              class="nav-link w-100 active"
+              id="table-tab"
               data-bs-toggle="tab"
-              data-bs-target="#home"
+              data-bs-target="#table"
               type="button"
               role="tab"
-              aria-controls="home"
+              aria-controls="table"
               aria-selected="true"
             >
               廠商列表
             </button>
           </li>
+          <!-- 圖資訊標籤 -->
           <li class="nav-item w-50" role="presentation">
             <button
               class="nav-link w-100"
-              id="profile-tab"
+              id="chart-tab"
               data-bs-toggle="tab"
-              data-bs-target="#profile"
+              data-bs-target="#chart"
               type="button"
               role="tab"
-              aria-controls="profile"
+              aria-controls="chart"
               aria-selected="false"
             >
               統計圖
@@ -35,15 +43,16 @@
           </li>
         </ul>
         <div class="tab-content" id="myTabContent">
+          <!-- 表格資訊 -->
           <div
             class="tab-pane fade show active"
-            id="home"
+            id="table"
             role="tabpanel"
-            aria-labelledby="home-tab"
-            style="height: calc(100vh - 200px); overflow-y: scroll"
+            aria-labelledby="table-tab"
+            style="height: calc(100vh - 230px); overflow-y: scroll"
           >
             <template v-if="tableData.rows.length > 0">
-              <div class="m-3 row">
+              <!-- <div class="m-3 row">
                 <label for="searchInTable" class="col-2 col-form-label">查詢：</label>
                 <div class="col-sm-10">
                   <input
@@ -55,8 +64,8 @@
                     onfocus="this.value=''"
                   />
                 </div>
-              </div>
-              <div class="btn-box d-flex justify-content-end mx-3 my-1">
+              </div> -->
+              <div class="btn-box d-flex justify-content-start mx-3 my-1">
                 <!-- <button
                   type="button"
                   class="btn btn-secondary mx-2 btn-sm"
@@ -117,22 +126,52 @@
                 </template>
               </template>
             </template>
+            <!-- <template v-if="tableData.rows.length === 0">
+              <template v-if="selectedChem.length !== 0">
+                <div style="padding: 20px; margin-top: 10px">
+                  廠商與此期間並未申報任何化學物質，請調整申報時間，以作進一步的查詢。
+                </div>
+              </template>
+              <template v-if="selectedOperation.length !== 0">
+                <div style="padding: 20px; margin-top: 10px">
+                  廠商與此期間並未申報任何化學物質，請調整申報時間，以作進一步的查詢。
+                </div>
+              </template>
+            </template> -->
           </div>
-
+          <!-- 圖資訊 -->
           <div
             class="tab-pane fade"
-            id="profile"
+            id="chart"
             role="tabpanel"
-            aria-labelledby="profile-tab"
+            aria-labelledby="chart-tab"
+            style="height: calc(100vh - 230px); overflow-y: scroll"
           >
-            ...
+            <template v-if="tableData.rows.length > 0">
+              <div style="padding: 5px; margin-top: 10px; font-size: 19px">
+                廠商運作化學物質
+              </div>
+              <div id="chart"></div>
+            </template>
+            <!-- <template v-if="tableData.rows.length === 0">
+              <template v-if="selectedChem.length !== 0">
+                <div style="padding: 20px; margin-top: 10px">
+                  廠商與此期間並未申報任何化學物質，請調整申報時間，以作進一步的查詢。
+                </div>
+              </template>
+              <template v-if="selectedOperation.length !== 0">
+                <div style="padding: 20px; margin-top: 10px">
+                  廠商與此期間並未申報任何化學物質，請調整申報時間，以作進一步的查詢。
+                </div>
+              </template>
+            </template> -->
           </div>
         </div>
       </div>
     </div>
   </transition>
+  <!-- 搜尋選單 -->
   <div class="fixed">
-    <!-- 搜尋選單 -->
     <!-- :class="{'withAuto': isExpand}" -->
     <div id="searchPannel">
       <div class="container-xs px-0">
@@ -142,6 +181,7 @@
             <div
               class="col-2 togglebtn noselect border-end"
               @click="navbarStatus = !navbarStatus"
+              @dblclick="handleNavbar"
             >
               &#9776;
             </div>
@@ -156,14 +196,21 @@
                 @Select="handleSelectQuery"
                 :allowEmpty="false"
               ></multiselect>
-              <!-- <div class="btn-box">
-                              <span v-if="!isExpand" @click="isExpand = !isExpand" >
-                                <i class="fa-solid fa-expand" ></i>
-                              </span>
-                              <span v-if="isExpand" @click="isExpand = !isExpand">
-                                <i class="fa-solid fa-compress" ></i>
-                              </span>
-                          </div> -->
+              <div class="btn-box">
+                <span @click="handleFullScreen" v-if="isFullscreen">
+                  <i class="fa-solid fa-compress"></i>
+                </span>
+                <span @click="handleFullScreen" v-if="!isFullscreen">
+                  <!-- <template > -->
+                  <i class="fa-solid fa-expand"></i>
+                </span>
+                <!-- </template>
+                  <template v-if="!isFullscreen">
+                    <i class="fa-solid fa-compress"></i>
+                  </template> -->
+                <!-- <span v-if="isFullscreen" @click="handleFullScreen">
+                </span> -->
+              </div>
             </div>
           </div>
         </template>
@@ -217,7 +264,7 @@
             <div class="col-12 border-top ps-0">
               <multiselect
                 v-model="selectedComFac"
-                placeholder="廠商查詢"
+                placeholder="請輸入統一編號、廠商名稱或工登"
                 open-direction="bottom"
                 :options="comFacOptions"
                 label="label"
@@ -297,6 +344,7 @@
       </div>
     </div>
   </div>
+  <!-- 點擊廠商彈出列表modal -->
   <div
     id="tableDetails"
     class="modal fade"
@@ -311,6 +359,7 @@
           <h5 class="modal-title" id="staticBackdropLabel">
             {{ selectedComFacInChemSearch }}
           </h5>
+
           <button
             type="button"
             class="btn-close"
@@ -318,12 +367,61 @@
             aria-label="Close"
           ></button>
         </div>
-        <div style="padding-left: 16px; padding-top: 0px; text-align: left">
+        <template v-if="tableData.rows.length > 0 && selectedComFacInChemSearch">
+          <div>
+            <div
+              style="
+                font-size: 16px;
+                padding-left: 16px;
+                padding-top: 0px;
+                text-align: left;
+              "
+            >
+              統編：{{
+                tableData.rows.filter((i) => i.comname === selectedComFacInChemSearch)[0]
+                  .adminno
+              }}
+            </div>
+            <div
+              style="
+                font-size: 16px;
+                padding-left: 16px;
+                padding-top: 0px;
+                text-align: left;
+              "
+            >
+              地址：{{
+                tableData.rows.filter((i) => i.comname === selectedComFacInChemSearch)[0]
+                  .addr
+              }}
+            </div>
+            <div
+              style="
+                font-size: 16px;
+                padding-left: 16px;
+                padding-top: 0px;
+                text-align: left;
+              "
+            >
+              裁罰資料：共
+              <span style="color: red; font-weight: bold">{{
+                PunishmentDataCnt.cnt
+              }}</span>
+              筆
+            </div>
+          </div>
+        </template>
+        <div style="padding-left: 16px; padding-top: 10px; text-align: left">
           共運作
           <span style="color: red; font-weight: bold">
             {{ [...new Set(comFacDetail.map((i) => i.cname))].length }}
           </span>
           項化學物質
+        </div>
+        <div
+          style="padding-left: 16px; padding-top: 0px; text-align: left; font-size: 0.8em"
+        >
+          (註：以下列出皆為原始資料，但不顯示運作量為 0 的數據。)
         </div>
         <div class="modal-body">
           <div style="margin-top: 10px; margin-bottom: 30px; width: 100%">
@@ -349,9 +447,7 @@
                 style="text-align: left"
                 @click="HandleSelectedChemInChemSearch"
               >
-                <span>
-                  {{ chem }}
-                </span>
+                <span> {{ index + 1 }}. {{ chem }} </span>
                 <span
                   style="
                     margin-left: 20px;
@@ -371,7 +467,12 @@
                   {{ catlist[cat] }}
                 </span>
               </div>
-              <template v-if="selectedChemInChemSearchStatus">
+              <div
+                :id="chem"
+                v-if="
+                  selectedChemInChemSearchStatus && chem === selectedChemInChemSearchName
+                "
+              >
                 <div
                   class="card-body"
                   style="overflow-x: scroll background-color: rgba(255, 255, 255, 0.7)"
@@ -382,11 +483,18 @@
                   >
                     <thead>
                       <tr>
-                        <th class="col-3" style="width: 10%">#</th>
-                        <th class="col-3" style="width: 20%">申報期別</th>
-                        <th class="col-3" style="width: 20%">來源</th>
-                        <th class="col-3" style="width: 20%">化學物質類型</th>
-                        <th class="col-3" style="width: 30%">運作行為</th>
+                        <th class="col-3" style="text-align: left; width: 10%">#</th>
+                        <th class="col-3" style="text-align: left; width: 20%">
+                          上傳期別
+                        </th>
+                        <th class="col-3" style="text-align: left; width: 20%">來源</th>
+                        <!-- <th class="col-3" style="text-align: left; width: 20%">
+                          化學物質類型
+                        </th> -->
+                        <th class="col-3" style="text-align: left; width: 30%">
+                          運作狀況
+                        </th>
+                        <th>id</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -404,20 +512,29 @@
                         <td class="text-left" style="width: 20%">
                           {{ dept_e2c[item.deptid] }}
                         </td>
-                        <td class="text-left" style="width: 20%">
+                        <!-- <td class="text-left" style="width: 20%">
                           {{ catlist[item.cat] }}
-                        </td>
+                        </td> -->
                         <td class="text-left" style="width: 30%">
+                          <!-- <template v-if="item.storageQ > 0"> -->
                           <div style="padding: 0px">貯存 {{ item.storageQ }} 公噸</div>
+                          <!-- </template> -->
+                          <!-- <template v-if="item.prodQ > 0"> -->
                           <div style="padding: 0px">製造 {{ item.prodQ }} 公噸</div>
+                          <!-- </template> -->
+                          <!-- <template v-if="item.usageQ > 0"> -->
                           <div style="padding: 0px">製造 {{ item.usageQ }} 公噸</div>
+                          <!-- </template> -->
+                          <!-- <template v-if="item.importQ > 0"> -->
                           <div style="padding: 0px">製造 {{ item.importQ }} 公噸</div>
+                          <!-- </template> -->
                         </td>
+                        <td>{{ item.id }}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-              </template>
+              </div>
             </div>
           </div>
         </div>
@@ -437,17 +554,36 @@ import { watch, computed } from "vue";
 import Multiselect from "vue-multiselect";
 import TableLite from "vue3-table-lite";
 import Slider from "@vueform/slider";
-import DataFrame from "dataframe-js";
-import Plotly from "plotly.js-dist-min";
 import { clearPlotlyTrace } from "./js/utility.js";
 import { faArrowCircleDown } from "@fortawesome/free-solid-svg-icons";
 import { utils, write } from "xlsx";
 import { saveAs } from "file-saver";
-import { Modal } from "bootstrap";
+import { Modal, Tab } from "bootstrap";
+import Plotly from "plotly.js-dist-min";
+import screenfull from "screenfull";
+
+var explosive_list = [
+  { casno: "67-64-1", cname: "丙酮", ename: "acetone" },
+  { casno: "74-86-2", cname: "乙炔", ename: "Acetylene" },
+  { casno: "6484-52-2", cname: "硝酸銨", ename: "Ammonium nitrate" },
+  { casno: "12190-79-3", cname: "鋰電池", ename: "Lithium cobaltate" },
+  { casno: "7439-93-2", cname: "鋰", ename: "Lithium" },
+  { casno: "1333-74-0", cname: "氫氣", ename: "hydrogen" },
+  { casno: "108-88-3", cname: "甲苯", ename: "methyl-Benzene" },
+  { casno: "67-63-0", cname: "異丙醇", ename: "Isopropanol" },
+  { casno: "7775-09-9", cname: "氯酸鈉", ename: "Sodium chlorate" },
+  { casno: "7803-62-5", cname: "矽甲烷", ename: "Silane" },
+  { casno: "107-13-1", cname: "丙烯腈", ename: "Cyanoethylene" },
+  { casno: "75-21-8", cname: "環氧乙烷", ename: "Ethene oxide" },
+  { casno: "75-56-9", cname: "環氧丙烷", ename: "Propyleneoxide" },
+  { casno: "7722-84-1", cname: "過氧化氫", ename: "Hydrogen peroxide" },
+  { casno: "1338-23-4", cname: "過氧化丁酮", ename: "2-Butanone peroxide" },
+];
 
 onMounted(() => {
   // click point in map
   let mymap = document.querySelector("#map");
+  // let piechart = document.querySelector("#piechart");
 
   // mymap.on("plotly_click", (i) => {
   //   try {
@@ -482,12 +618,13 @@ onMounted(() => {
       if (className.includes("show")) {
         document.querySelector("div.modal .modal-footer button").click();
       } else {
-        research();
+        // research();
       }
     } else if (i.key === "Escape") {
       data.value = [];
       tableData.rows = [];
       clearPlotlyTrace("all");
+      clearPlotlyTrace("chart");
       // selectedChems.value = [];
       // selectedFacs.value = [];
       // displayedChem.value = {};
@@ -502,6 +639,11 @@ onMounted(() => {
 
   // getWidth();
   // window.addEventListener('resize', getWidth);
+  // var triggerEl = document.querySelector("#myTab #chart-tab");
+  // var tab = new Tab(triggerEl);
+  // tab.show();
+  // console.log(Tab.getInstance(triggerEl));
+  // Tab.getInstance(triggerEl); // Select tab by name
 });
 
 // emit and props
@@ -521,13 +663,17 @@ var timeOptions = ref([]); // 時間列表
 var timeLen = ref("");
 var selectedTime = ref([0, 0]); // 選擇的時間
 var isExpand = ref(false); // 是否要全屏
+var isFullscreen = ref(false); // 是否要全屏
 var selectedComFacInChemSearch = ref(""); // 化學物質搜尋時點擊的廠商
 var selectedChemInChemSearchStatus = ref(false); // 化學物質搜尋時點擊廠商後選定的化學物質
+var selectedChemInChemSearchName = ref(""); // 化學物質搜尋時點擊廠商後選定的化學物質
+var selectedChemInChemSearchName0 = ref(""); // 化學物質搜尋時點擊廠商後選定的化學物質 前一個
 
 // base url
 var baseurl = import.meta.env.VITE_API_BASE_URL;
 var baseurl_ver2 = import.meta.env.VITE_API_BASE_URL_ver2;
 var baseurl_ver4 = import.meta.env.VITE_API_BASE_URL_ver4;
+var baseurl_ver5 = import.meta.env.VITE_API_BASE_URL_ver5;
 
 // 函數 與 相關參數
 var isLoadingChem = ref(false);
@@ -542,8 +688,9 @@ var timeTick;
 var data;
 var emitData = ref();
 // toggle navbar
-var navbarStatus =
-  document.querySelector("body").clientWidth > 760 ? ref(true) : ref(false);
+var navbarStatus = ref(
+  document.querySelector("body").clientWidth > 760 ? ref(true) : ref(false)
+);
 
 // toggle table-lite row
 var handleToggleInfoFromSearchChem;
@@ -563,6 +710,7 @@ var handleSelectChem;
 var downloadResult;
 var latestDeclaration;
 var isLatest = ref(false);
+var PunishmentDataCnt = ref("");
 
 // table
 
@@ -591,18 +739,60 @@ var dept_e2c = ref({
   EPA003: "環保署土基會",
 });
 
+// 需要優化....
 var HandleSelectedChemInChemSearch = (i) => {
-  console.log(i);
-  selectedChemInChemSearchStatus.value = !selectedChemInChemSearchStatus.value;
+  // console.log(i.target.innerHTML);
+  //console.log(i.target.tagName.toLowerCase());
+  selectedChemInChemSearchName0.value = selectedChemInChemSearchName.value;
+  if (i.target.tagName.toLowerCase() === "span") {
+    selectedChemInChemSearchName.value = i.target.innerText.split(".")[1].trim();
+  } else {
+    selectedChemInChemSearchName.value = i.target
+      .querySelector("span")
+      .innerHTML.split(".")[1]
+      .trim();
+  }
+  //console.log(selectedChemInChemSearchName0.value, selectedChemInChemSearchName.value);
+  if (
+    selectedChemInChemSearchName0.value === selectedChemInChemSearchName.value ||
+    selectedChemInChemSearchName0.value === ""
+  ) {
+    selectedChemInChemSearchStatus.value = !selectedChemInChemSearchStatus.value;
+  } else if (
+    selectedChemInChemSearchName0.value !== selectedChemInChemSearchName.value &&
+    !selectedChemInChemSearchStatus.value
+  ) {
+    selectedChemInChemSearchStatus.value = true;
+  }
+};
+
+var handleFullScreen = (i) => {
+  isFullscreen.value = !isFullscreen.value;
+  if (screenfull.isEnabled) {
+    if (isFullscreen.value) {
+      screenfull.request();
+    } else {
+      screenfull.exit();
+    }
+  }
+};
+
+var handleNavbar = (i) => {
+  //console.log(i);
+};
+
+var swipeHandler = (i) => {
+  navbarStatus.value = !navbarStatus.value;
+  //console.log(i);
 };
 
 const getWidth = () => {
   setTimeout(() => {
     let newWidth = document.querySelector("body").clientWidth;
-    console.log("newWidth-", newWidth);
+    // console.log("newWidth-", newWidth);
     if (newWidth <= 450 && isExpand.value) {
       isExpand.value = false;
-      console.log("isExpand-", isExpand.value);
+      // console.log("isExpand-", isExpand.value);
     } else if (newWidth > 451 && !isExpand.value) {
       isExpand.value = true;
     }
@@ -653,7 +843,7 @@ if (defineParameter) {
     { method: "廠商名稱 或 統一編號" },
   ];
   selectedQuery.value = "運作行為 與 化學物質";
-  selectedQuery.value = "廠商名稱 或 統一編號";
+  // selectedQuery.value = "廠商名稱 或 統一編號";
 
   // 取得運作行為列表
   operationOptions.value = [
@@ -669,6 +859,7 @@ if (defineParameter) {
   handleSelectQuery = (selected) => {
     if (selected !== selectedQuery.value) {
       clearPlotlyTrace("all");
+      clearPlotlyTrace("chart");
       tableData.rows = [];
       selectedChem.value = "";
       searchInTable.value = "";
@@ -685,20 +876,30 @@ if (defineParameter) {
   handleToggleInfoFromSearchChem = async (info) => {
     var tableDetailsModal = new Modal(document.getElementById("tableDetails"));
     tableDetailsModal.show();
-    console.log("info", info);
+    // console.log("info", info);
     let state = info.state;
     let id = info.id;
     if (state) {
       let row = info.row;
-      console.log(row);
+      if (row.X === "") {
+        alert("此廠商無座標資訊，將不標記廠商位置");
+      }
+      // console.log(row);
       let tmp, url;
       // 取得廠商統計資料
       url = `${baseurl_ver4}/mergedRecords/data_list?company_name=${row.comname_merged}&limit=1000&display=False`;
-      console.log(url);
+      //  console.log(url);
       tmp = await fetch(url).then((res) => res.json());
-      // console.log(tmp);
+      console.log(tmp);
       tmp = tmp.sort((a, b) => a.cname.localeCompare(b.cname, "zh-hant"));
+
+      // 取得裁罰資料
+      let adminno = tmp[0].adminno;
       selectedComFacInChemSearch.value = row.comname;
+      url = `${baseurl_ver5}/Punishment/${adminno}`;
+      var tmp2 = await fetch(url).then((res) => res.json());
+      PunishmentDataCnt.value = tmp2;
+      //  console.log(url);
       // tmp = new DataFrame(tmp)
       //   .sortBy(["declaretime", "deptid", "operation"])
       //   .toCollection();
@@ -717,19 +918,19 @@ if (defineParameter) {
     } else {
       // toggleOpen.value = false
       // console.log(toggleOpen.value)
-      console.log("============");
+      //  console.log("============");
       clearPlotlyTrace("fac");
     }
   };
 
   handleToggleInfoFromSearchFac = (info) => {
-    console.log(info);
+    //  console.log(info);
     var tableDetailsModal = new Modal(document.getElementById("tableDetails"));
     tableDetailsModal.show();
     let state = info.state;
     if (state) {
       let row = { ...info.row };
-      console.log(row);
+      //  console.log(row);
       // tmp = [...emitData.value.data[1].proc].filter(i => i.group === row.group)
       emit("focusResult", { state: true, row: [row] });
     } else {
@@ -881,16 +1082,18 @@ var tableForFacSearch = reactive({
 
 // 監控化學物質選項model狀態
 watch([selectedChem], ([newVal], [oldVal]) => {
-  console.log("newVal", newVal);
-  console.log("oldVal", oldVal);
+  // console.log("newVal", newVal);
+  // console.log("oldVal", oldVal);
   if (newVal && oldVal) {
-    if (newVal.chnname !== oldVal.chnname) {
+    if (newVal !== oldVal) {
       clearPlotlyTrace("all");
+      clearPlotlyTrace("chart");
       // tableData.rows = []
       toggleOpen.value = false;
     }
   } else {
     clearPlotlyTrace("all");
+    clearPlotlyTrace("chart");
     tableData.rows = [];
     toggleOpen.value = false;
   }
@@ -901,13 +1104,15 @@ watch([selectedChem], ([newVal], [oldVal]) => {
 watch([selectedOperation], ([newVal], [oldVal]) => {
   // console.log(newVal, oldVal)
   if (newVal && oldVal) {
-    if (newVal.chnname !== oldVal.chnname) {
+    if (newVal !== oldVal) {
       clearPlotlyTrace("all");
+      clearPlotlyTrace("chart");
       // tableData.rows = []
       toggleOpen.value = false;
     }
   } else {
     clearPlotlyTrace("all");
+    clearPlotlyTrace("chart");
     tableData.rows = [];
     toggleOpen.value = false;
   }
@@ -919,6 +1124,7 @@ watch(selectedTime, (newTime, oldTime) => {
   // console.log(newTime[0], oldTime[0], newTime[1], oldTime[1])
   if (newTime[0] !== oldTime[0] || newTime[1] !== oldTime[1]) {
     clearPlotlyTrace("all");
+    clearPlotlyTrace("chart");
     // tableData.rows = []
     toggleOpen.value = false;
   }
@@ -936,6 +1142,14 @@ watch(
   }
 );
 
+watch(isLatest, (newval, oldval) => {
+  clearPlotlyTrace("all");
+  clearPlotlyTrace("chart");
+  // tableData.rows = []
+  toggleOpen.value = false;
+  //console.log(newval);
+});
+
 // watch 化學物質與廠商搜尋
 watch(
   [
@@ -952,20 +1166,20 @@ watch(
 
     var t0 = timeOptions.value[selectedTime.value[0]];
     var t1 = timeOptions.value[selectedTime.value[1]];
-    console.log(t0, t1);
+    //  console.log(t0, t1);
     // tableData.rows = [];
     isLoadingChemData.value = true;
 
-    console.log(newIsLatest, newQuery);
+    //  console.log(newIsLatest, newQuery);
     var para_latest = "";
     if (newIsLatest) {
       para_latest = "&time_latest=True";
     }
 
     if (newQuery === "運作行為 與 化學物質") {
-      console.log(123, newChem, oldChem);
+      //  console.log(123, newChem, oldChem);
       if (
-        (newChem && oldChem && newChem.cname !== oldChem.cname) ||
+        (newChem && oldChem && newChem !== oldChem) ||
         (newOperation && oldOperation && newOperation.chn !== oldOperation.chn) ||
         oldTime[0] !== newTime[0] ||
         oldTime[1] !== newTime[1] ||
@@ -996,10 +1210,10 @@ watch(
         ];
         // console.log(data.keys());
         for (let ind of Object.keys(data)) {
-          console.log(ind);
+          //  console.log(ind);
           var fullUrl = `${data[ind]["url"]}${data[ind]["para"]}`;
           data[ind].fullUrl = fullUrl;
-          console.log(fullUrl);
+          //  console.log(fullUrl);
           data[ind].data = await fetch(fullUrl).then((res) => res.json());
         }
         let data_fac = data[1].data;
@@ -1011,8 +1225,12 @@ watch(
         };
         data_fac = data_fac.sort((a, b) => a.comname.localeCompare(b.comname, "zh-hant"));
         tableData.rows = data_fac;
-        console.log(tableData.rows);
+        //  console.log(tableData.rows);
         emit("queryFromChemSearch", emitData);
+        //  console.log(data[0].data);
+        if (data[0].data.length) {
+          plotchart(data[0].data);
+        }
       }
     }
     if (newQuery === "廠商名稱 或 統一編號") {
@@ -1039,37 +1257,23 @@ watch(
         ];
         for (let ind of data.keys()) {
           var fullUrl = `${data[ind]["url"]}${data[ind]["para"]}`;
-          console.log(fullUrl);
+          //  console.log(fullUrl);
           data[ind].fullUrl = fullUrl;
           data[ind].data = await fetch(fullUrl).then((res) => res.json());
         }
         // console.log(data)
         // console.log(data)
         var data_fac = data[1].data;
-        console.log(data_fac);
-        console.log(data[0].data);
+        //  console.log(data_fac);
+        //  console.log(data[0].data);
 
         data_fac = data_fac.sort((a, b) => a.cname.localeCompare(b.cname, "zh-hant"));
         tableData.rows = data_fac;
         emitData.value = { time: [t0, t1], comFac: newComFac, data: data };
         emit("queryFromFacSearch", emitData);
-        // var data_fac_merged = data[1].data
-
-        // data_fac_merged.map(i => i.operation = operationOptions.value.filter(j => j.eng === i.operation)[0]['chn'])
-        // data_fac_merged.map(i => i.deptid = dept_e2c.value[i.deptid])
-        // data_fac.map(i => i.operation = operationOptions.value.filter(j => j.eng === i.operation)[0]['chn'])
-        // data_fac.map(i => i.deptid = dept_e2c.value[i.deptid])
-
-        // data[0].proc = data_fac
-        // // console.log(data_fac_merged)
-        // data[1].proc = data_fac_merged
-        // // console.log(data[1].proc)
-        // console.log(data)
-        // // console.log(data_fac_merged)
-        // // console.log(data[1].proc)
-        // tableData.rows = data_fac
-        // emitData.value = { time: newTimeObject, comFac: newComFac, data: data }
-        // emit('queryFromFacSearch', emitData)
+        if (data[1].data.length) {
+          plotchart(data[1].data);
+        }
       }
     }
     isLoadingChemData.value = false;
@@ -1100,15 +1304,36 @@ asyncGetChem = (query) => {
     chemical_name: query,
   };
   let url = `${apiurl}/chemical_list?${object2para(param)}`;
+  console.log(url);
   fetch(url)
     .then((res) => res.json())
     .then((res) => {
       res.map(
-        (i) =>
-          (i.label = `${
-            catlist.value[i.cat]
-          } > ${i.cname.trim()} ${i.ename.trim()} ${i.casno.trim()}`)
+        (i) => (i.label = `${i.casno.trim()} ${i.cname.trim()} ${i.ename.trim()}`)
+
+        // (i.label = `
+        // ${
+        //   catlist.value[i.cat]
+        // } > ${i.cname.trim()} ${i.ename.trim()} ${i.casno.trim()}`)
       );
+      // 移除不在13+1列表中的casno
+      let res2 = [...res].map((i) => {
+        if (i.cat === "explosive") {
+          let name = explosive_list.filter((j) => j.casno === i.casno);
+          if (name.length > 0) {
+            i.cname = name[0].cname;
+          }
+        }
+        return i;
+      });
+
+      res2 = res2.filter((i) => explosive_list.map((j) => j.casno).includes(i.casno));
+      // console.log(res.map((i) => i.cname));
+      // console.log(res.map((i) => i.cname).length);
+      // console.log(res2.map((i) => i.cname));
+      // console.log(res2.map((i) => i.cname).length);
+
+      res = res.sort((a, b) => a.cname.localeCompare(b.cname));
       chemOptions.value = res;
       isLoadingChem.value = false;
     });
@@ -1156,7 +1381,7 @@ getTime = () => {
   fetch(url)
     .then((res) => res.json())
     .then((res) => {
-      console.log(res);
+      //  console.log(res);
       timeLen.value = res.length;
       res = res.map((i) => i.declaretime);
       timeOptions.value = res;
@@ -1168,6 +1393,231 @@ getTime = () => {
 timeTick = (val) => {
   val = parseInt(val.toFixed());
   return { ...timeOptions.value }[val];
+};
+
+// 繪圖
+
+var plotchart = (data) => {
+  let chart = document.querySelector("#chart");
+  if (selectedQuery.value === "運作行為 與 化學物質") {
+    let div = document.createElement("div");
+    div.id = "piechart";
+    chart.append(div);
+    var colormap = {
+      基隆市: "rgba(220, 80,75, .8)",
+      臺北市: "rgba(220, 53,69, .8)",
+      新北市: "rgba(180,50,120, .8)",
+      桃園市: "rgba(232,62,141, .8)",
+      新竹市: "rgba(220,110,205, .8)",
+      新竹縣: "rgba(239,134, 54, .8)",
+      苗栗縣: "rgba(98,190, 95, .8)",
+      臺中市: "rgba(32,201,150, .8)",
+      南投縣: "rgba(40,167, 70, .8)",
+      彰化縣: "rgba(9,200, 205, .8)",
+      雲林縣: "rgba(59,117,145, .8)",
+      嘉義縣: "rgba(0, 70, 120, .8)",
+      嘉義市: "rgba(20, 90, 175, .8)",
+      臺南市: "rgba(0, 123,255, .8)",
+      高雄市: "rgba(255, 193,7, .8)",
+      屏東縣: "rgba(253,125,20, .8)",
+      臺東縣: "rgba(102,16,242, .8)",
+      花蓮縣: "rgba(110,66, 193, .8)",
+      宜蘭縣: "rgba(23,163,184, .8)",
+      澎湖縣: "rgba(108,117,125, .8)",
+      連江縣: "rgba(52, 58, 64, .8)",
+      金門縣: "rgba(0, 123,255, .8)",
+    };
+
+    var data2 = [];
+    var operation = selectedOperation.value;
+
+    Object.entries(colormap).forEach(([city, color]) => {
+      let citydata = data.filter((j) => j.City === city);
+      if (citydata.length > 0) {
+        citydata[0]["color"] = color;
+        data2.push(citydata[0]);
+      }
+    });
+    // data.forEach((i) => {
+    //   if (i.City !== "-") {
+    //     i["color"] = colormap[i.City];
+    //     data2.push(i);
+    //   }
+    // });
+    //  console.log(data2);
+    var values = data2.map((i) => i.Q);
+    var labels = data2.map((i) => i.City);
+    var colors = data2.map((i) => i.color);
+    //  console.log(labels, values, colors);
+    var trace = [
+      {
+        type: "pie",
+        name: "piechart",
+        values: values,
+        labels: labels,
+        marker: {
+          colors: colors,
+          line: {
+            width: 1.5,
+          },
+        },
+        textinfo: "label+percent",
+        textposition: "inside",
+        // automargin: true,
+        sort: false,
+      },
+    ];
+
+    var layout = {
+      title: "運作化學物質分佈圖",
+      width: 340,
+      margin: { t: 50, b: 10, l: 20, r: 20 },
+      showlegend: true,
+      // plot_bgcolor: "#FFF3",
+      // paper_bgcolor: "#FFF3",
+      legend: {
+        x: 0.5,
+        y: -0.1,
+        xanchor: "center",
+        yanchor: "top",
+        orientation: "h",
+        itemwidth: 40,
+      },
+    };
+    var config = {
+      responsive: true,
+      // autosize: true, // set autosize to rescale
+      displayModeBar: false,
+    };
+
+    Plotly.newPlot("piechart", trace, layout, config);
+  }
+
+  if (selectedQuery.value === "廠商名稱 或 統一編號") {
+    //  console.log(data);
+    var div;
+
+    // chart.append(div);
+
+    // div = document.createElement("div");
+    // div.innerText = "廠商運作化學物質";
+    // div.style.padding = "5px";
+    // div.style.marginTop = "10px";
+    // div.style.fontSize = "18px";
+    // document.querySelector("#barchart").append(div);
+
+    div = document.createElement("div");
+    div.id = "barchart";
+    chart.append(div);
+
+    var trace = [];
+    var data2;
+    var cnt = 0;
+    operationOptions.value.forEach((operation) => {
+      data2 = [];
+      data.forEach((idata) => {
+        if (idata.operation === operation.eng) {
+          data2.push(idata);
+        }
+      });
+      var x = data2.map((i) => i.Q);
+      var y = data2.map((i) => `${dept_e2c.value[i.deptid]}<br>${i.cname}`);
+      x = x.length ? x : [0];
+      y = y.length ? y : [""];
+      cnt += y.length;
+      //  console.log(x.length);
+      trace.push({
+        x: x,
+        // y: data2.map((i) => `${i.cname}`),
+        y: y,
+        // width: data2.length ? Array(data.length).fill(1) : [],
+        name: operation.chn,
+        type: "bar",
+        orientation: "h",
+        marker: {
+          // color: colors[ind],
+          line: {
+            // color: 'rgb(230,200,17)',
+            width: 1.5,
+          },
+        },
+      });
+    });
+
+    var height = 50 * cnt;
+    //  console.log(trace);
+    var layout = {
+      // title: {
+      //   pad: {
+      //     b: 20,
+      //   },
+      //   y: 1.2,
+      //   text: "廠商運作化學物質",
+      // },
+      // barmode: "group",
+      height: height,
+      width: 340,
+      legend: {
+        x: -0.25,
+        y: 1 + 10 / (cnt + 5 * cnt),
+        orientation: "h",
+        itemwidth: 20,
+        xanchor: "left",
+        yanchor: "center",
+        font: {
+          size: 16,
+          family: "Times New Roman",
+        },
+      },
+      paper_bgcolor: "rgba(0,0,0,0)",
+      plot_bgcolor: "rgba(0,0,0,0)",
+      font: {
+        family: "Courier New, monospace",
+        size: 14,
+        color: "rgb(30,20,28)",
+      },
+      margin: {
+        l: 80,
+        r: 10,
+        b: 40,
+        t: 0,
+        // pad: 4
+      },
+      yaxis: {
+        tickfont: {
+          size: 10,
+        },
+      },
+      xaxis: {
+        gridcolor: "rgba(200, 200, 200, .9)",
+        rangemode: "nonnegative",
+        tickfont: {
+          size: 15,
+          family: "Times New Roman",
+        },
+        side: "top",
+      },
+      // annotations: [
+      //   {
+      //     xref: "paper",
+      //     yref: "paper",
+      //     x: 0.02,
+      //     xanchor: "right",
+      //     y: 1.1,
+      //     yanchor: "center",
+      //     text: "公噸",
+      //     showarrow: false,
+      //   },
+      // ],
+    };
+    var config = {
+      responsive: true,
+      // autosize: true, // set autosize to rescale
+      displayModeBar: false,
+    };
+    Plotly.newPlot("barchart", trace, layout, config);
+    // Plotly.newPlot("piechart", trace, layout, config);
+  }
 };
 </script>
 
